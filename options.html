@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Copilot Doctor - Options</title>
+  <link rel="stylesheet" href="options.css" />
+</head>
+<body>
+  <div id="app">
+    <h1>Copilot Doctor Setup</h1>
+
+    <div id="site-list">
+      <div id="list-header">
+        <h2>Site Configurations</h2>
+        <button id="add-site">+ Add Site</button>
+      </div>
+      <p id="empty-msg" class="hint">No sites configured yet.</p>
+      <div id="sites"></div>
+    </div>
+
+    <div id="editor" class="hidden">
+      <h2 id="editor-title">Edit Site</h2>
+
+      <label>
+        Hostname
+        <input type="text" id="hostname" placeholder="e.g. copilot-prod.example.com" />
+        <span class="hint">The hostname of the Copilot page this config applies to.</span>
+      </label>
+
+      <label>
+        Organization
+        <input type="text" id="org" placeholder="e.g. mycompany" />
+      </label>
+
+      <label>
+        Tenant
+        <input type="text" id="tenant" placeholder="e.g. ProdTenant" />
+      </label>
+
+      <label>
+        Folder
+        <input type="text" id="folder" placeholder="e.g. Production" />
+      </label>
+
+      <label>
+        Personal Access Token
+        <input type="password" id="token" placeholder="Paste your PAT here" />
+      </label>
+
+      <div id="status"></div>
+
+      <div class="btn-row">
+        <button id="save">Save</button>
+        <button id="test" class="secondary">Test Connection</button>
+        <button id="cancel" class="danger">Cancel</button>
+        <button id="delete" class="danger right">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="options.js" type="module"></script>
+</body>
+</html>

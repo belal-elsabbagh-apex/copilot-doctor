@@ -1,0 +1,15 @@
+{
+  "name": "copilot-doctor",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc && cp popup.html options.html jobs.html popup.css options.css jobs.css manifest.json dist/ && cp -r icons/ dist/",
+    "watch": "tsc --watch",
+    "pack": "npm run build && node scripts/pack.mjs"
+  },
+  "devDependencies": {
+    "@types/chrome": "^0.0.287",
+    "archiver": "^8.0.0",
+    "typescript": "^6.0.3"
+  }
+}
