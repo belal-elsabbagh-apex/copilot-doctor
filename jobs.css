@@ -113,23 +113,23 @@ h1 {
 
 .job-expanded .output-row {
   display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 3px 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 4px 0;
   border-bottom: 1px solid #f0f0f0;
 }
 
 .job-expanded .output-key {
   font-weight: 600;
   color: #555;
-  white-space: nowrap;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .job-expanded .output-value {
   color: #333;
-  word-break: break-all;
-  text-align: right;
-  max-width: 400px;
+  word-break: break-word;
 }
 
 .json-pretty {
@@ -141,7 +141,6 @@ h1 {
   line-height: 1.4;
   white-space: pre;
   overflow-x: auto;
-  max-width: 480px;
   text-align: left;
   margin: 0;
 }

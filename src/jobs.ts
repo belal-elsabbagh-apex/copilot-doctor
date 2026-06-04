@@ -149,6 +149,15 @@ function renderMatchDetail(container: HTMLElement, match: JobMatch) {
   const existingVideo = container.querySelector("video");
   if (existingVideo) existingVideo.remove();
 
+  if (match.videoUrl) {
+    const video = document.createElement("video");
+    video.src = match.videoUrl;
+    video.controls = true;
+    video.className = "video-player";
+    video.preload = "metadata";
+    container.appendChild(video);
+  }
+
   if (match.output) {
     const outputFields = document.createElement("div");
     outputFields.className = "output-fields";
@@ -160,15 +169,6 @@ function renderMatchDetail(container: HTMLElement, match: JobMatch) {
       )
       .join("");
     container.appendChild(outputFields);
-  }
-
-  if (match.videoUrl) {
-    const video = document.createElement("video");
-    video.src = match.videoUrl;
-    video.controls = true;
-    video.className = "video-player";
-    video.preload = "metadata";
-    container.appendChild(video);
   }
 }
 

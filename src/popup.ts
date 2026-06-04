@@ -163,6 +163,15 @@ function renderMatchDetail(match: JobMatch, container: HTMLElement) {
   `;
   section.appendChild(stateEl);
 
+  if (videoUrl) {
+    const video = document.createElement("video");
+    video.src = videoUrl;
+    video.controls = true;
+    video.className = "video-player";
+    video.preload = "metadata";
+    section.appendChild(video);
+  }
+
   if (matchedOutput) {
     const outputFields = document.createElement("div");
     outputFields.className = "output-fields";
@@ -174,15 +183,6 @@ function renderMatchDetail(match: JobMatch, container: HTMLElement) {
       )
       .join("");
     section.appendChild(outputFields);
-  }
-
-  if (videoUrl) {
-    const video = document.createElement("video");
-    video.src = videoUrl;
-    video.controls = true;
-    video.className = "video-player";
-    video.preload = "metadata";
-    section.appendChild(video);
   }
 
   container.appendChild(section);
