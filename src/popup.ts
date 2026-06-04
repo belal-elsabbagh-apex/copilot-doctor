@@ -58,8 +58,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  chrome.storage.local.get(["siteConfigs", "cachedOrderIds"], (data) => {
-    const raw = data as StorageResult & { cachedOrderIds?: Record<string, string[]> };
+  chrome.storage.local.get("siteConfigs", (data) => {
+    const raw = data as StorageResult;
     const cfg = raw.siteConfigs?.[currentHost];
     if (configStatus) {
       if (cfg) {
@@ -70,8 +70,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         configStatus.className = "missing";
       }
     }
-    const ids = raw.cachedOrderIds?.[currentHost];
-    if (ids?.length) renderCachedOrders(ids);
   });
 
   triggerScan();
@@ -85,25 +83,6 @@ chrome.runtime.onMessage.addListener((message: unknown) => {
     renderResults(message as ScanResult);
   }
 });
-
-function renderCachedOrders(ids: string[]) {
-  if (!content) return;
-  let el = content.querySelector(".cached-orders") as HTMLElement | null;
-  if (!el) {
-    el = document.createElement("div");
-    el.className = "cached-orders";
-    content.prepend(el);
-  }
-  el.innerHTML = `<strong>Orders on page</strong> ${ids.map((id) =>
-    `<button class="order-chip" data-id="${id}">${id}</button>`
-  ).join(" ")}`;
-  el.querySelectorAll(".order-chip").forEach((btn) =>
-    (btn as HTMLElement).addEventListener("click", () => {
-      const id = (btn as HTMLElement).dataset.id;
-      if (id) triggerScan(id);
-    })
-  );
-}
 
 function renderResults(result: ScanResult) {
   if (!content) return;
