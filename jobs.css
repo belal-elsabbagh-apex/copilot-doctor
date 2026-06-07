@@ -11,6 +11,11 @@ body {
   color: #e2e8f0;
 }
 
+body::-webkit-scrollbar { width: 8px; }
+body::-webkit-scrollbar-track { background: #0f172a; }
+body::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+body::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
 #app {
   max-width: 800px;
   margin: 0 auto;
@@ -153,6 +158,11 @@ h1 {
   margin: 0;
   border: 1px solid #334155;
 }
+
+.json-pretty::-webkit-scrollbar { height: 6px; }
+.json-pretty::-webkit-scrollbar-track { background: #0f172a; }
+.json-pretty::-webkit-scrollbar-thumb { background: #475569; border-radius: 3px; }
+.json-pretty::-webkit-scrollbar-thumb:hover { background: #64748b; }
 
 .json-pretty .hl-key { color: #93c5fd; }
 .json-pretty .hl-str { color: #4ade80; }

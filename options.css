@@ -13,6 +13,11 @@ body {
   color: #e2e8f0;
 }
 
+body::-webkit-scrollbar { width: 8px; }
+body::-webkit-scrollbar-track { background: #0f172a; }
+body::-webkit-scrollbar-thumb { background: #475569; border-radius: 4px; }
+body::-webkit-scrollbar-thumb:hover { background: #64748b; }
+
 #app {
   max-width: 600px;
   width: 100%;
