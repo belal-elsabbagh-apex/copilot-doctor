@@ -39,6 +39,11 @@ document.getElementById("scan-page")?.addEventListener("click", () => {
 const manifest = chrome.runtime.getManifest();
 const titleEl = document.querySelector("h1");
 if (titleEl) {
+  const icon = document.createElement("img");
+  icon.src = "icons/icon16.png";
+  icon.className = "title-icon";
+  icon.alt = "";
+  titleEl.prepend(icon);
   const ver = document.createElement("span");
   ver.className = "version";
   ver.textContent = `v${manifest.version}`;
