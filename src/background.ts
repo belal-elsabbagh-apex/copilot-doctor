@@ -1,46 +1,11 @@
 export {};
 
-function migrateOldConfig() {
-  chrome.storage.local.get(
-    ["org", "tenant", "folder", "token", "orderSelector"],
-    (data) => {
-      const d = data as Record<string, string | undefined>;
-      if (!("org" in d) && !("tenant" in d)) return;
-      if (!d.org && !d.tenant) return;
-
-      chrome.storage.local.get("siteConfigs", (result) => {
-        const r = result as { siteConfigs?: Record<string, SiteConfig> };
-        if (r.siteConfigs && Object.keys(r.siteConfigs).length > 0) return;
-
-        chrome.storage.local.set({
-          siteConfigs: {
-            "copilot.example.com": {
-              org: d.org || "",
-              tenant: d.tenant || "",
-              folder: d.folder || "",
-              token: d.token || "",
-            },
-          },
-        });
-        chrome.storage.local.remove([
-          "org",
-          "tenant",
-          "folder",
-          "token",
-          "orderSelector",
-        ]);
-      });
-    },
-  );
-}
-
 function setupBgOnInstalledListener() {
   chrome.runtime.onInstalled.addListener((details) => {
     if (details.reason === "install") {
       chrome.storage.local.set({ siteConfigs: {} });
       chrome.tabs.create({ url: "options.html" });
     }
-    migrateOldConfig();
   });
 }
 
