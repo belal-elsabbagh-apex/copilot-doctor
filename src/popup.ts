@@ -1,7 +1,5 @@
 export {};
 
-import { getScanCache } from "./cache.js";
-
 const configStatus = document.getElementById("config-status");
 const content = document.getElementById("content");
 const pageInfo = document.getElementById("page-info");
@@ -80,7 +78,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  getScanCache().then((cached) => {
+  ScanCache.get().then((cached) => {
     if (cached && cached.cachedHost === currentHost && cached.selectedOrderId) {
       selectedMatchIndex = 0;
       renderResults(cached as ScanResult);

@@ -1,4 +1,3 @@
-import { setScanCache, clearScanCache } from "./cache.js";
 
 console.debug("[Copilot Doctor] content script loaded");
 
@@ -53,7 +52,7 @@ function setupAutoScan() {
     );
     const id = selected?.id || null;
     if (id && id !== lastId) {
-      clearScanCache();
+      ScanCache.clear();
       lastId = id;
       clearTimeout(scanTimer);
       scanTimer = setTimeout(() => {
@@ -153,7 +152,7 @@ async function scanPage(orderId?: string) {
     scanError: fetchError,
   };
   chrome.runtime.sendMessage({ type: "SCAN_RESULTS", ...result });
-  setScanCache(result, hostname);
+  ScanCache.set(result, hostname);
   persistScanResult(hostname, result);
   console.debug("[Copilot Doctor] SCAN_RESULTS sent");
   return result;

@@ -40,6 +40,12 @@ interface ScanResult {
   scanError: string | null;
 }
 
+declare const ScanCache: {
+  set(result: ScanResult, hostname: string): Promise<void>;
+  get(): Promise<(ScanResult & { cachedHost: string }) | null>;
+  clear(): Promise<void>;
+};
+
 interface SavedJob {
   id: string;
   scannedAt: number;
