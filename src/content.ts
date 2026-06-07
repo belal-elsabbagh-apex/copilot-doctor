@@ -1,17 +1,11 @@
 const hostname = location.hostname;
 
+let currentConfig: SiteConfig | undefined;
+
 const VALID_HOSTS = new Set([
   "copilot.apexmedical.ai",
   "pre-prod-copilot.apexmedicalai.com",
 ]);
-
-function getConfig(): Promise<SiteConfig | undefined> {
-  return chrome.storage.local.get("siteConfigs").then((raw) =>
-    raw && typeof raw === "object" && "siteConfigs" in raw
-      ? (raw as StorageResult).siteConfigs?.[hostname]
-      : undefined,
-  );
-}
 
 function cacheOrderIds() {
   const cards = document.querySelectorAll<HTMLElement>(".order-card");
@@ -59,7 +53,7 @@ async function scanPage(orderId?: string) {
 
   chrome.runtime.sendMessage({ type: "SCAN_STATUS", phase: "scanning" });
 
-  const config = await getConfig();
+  const config = currentConfig;
   console.debug("[Copilot Doctor] config found:", !!config);
 
   if (!config) {
@@ -105,7 +99,7 @@ async function scanPage(orderId?: string) {
               fullJob.Key || fullJob.Id,
             );
             const videoUrl = await fetchJobVideoUrl(fullJob.Key || "");
-            const jobUrl = await fetchJobUrl(fullJob.Key || fullJob.Id || "");
+            const jobUrl = fetchJobUrl(fullJob.Key || fullJob.Id || "");
             matches.push({ job: fullJob, output, videoUrl, jobUrl });
           }
         } catch (parseErr) {
@@ -240,9 +234,8 @@ async function fetchJobVideoUrl(jobKey: string): Promise<string | null> {
     return null;
   }
 }
-async function fetchJobUrl(jobKey: string): Promise<string> {
-  const cfg = await getConfig();
-  return `https://cloud.uipath.com/${cfg!.org}/${cfg!.tenant}/orchestrator_/jobs(sidepanel:sidepanel/jobs/${jobKey}/details)`;
+function fetchJobUrl(jobKey: string): string {
+  return `https://cloud.uipath.com/${currentConfig!.org}/${currentConfig!.tenant}/orchestrator_/jobs(sidepanel:sidepanel/jobs/${jobKey}/details)`;
 }
 
 function persistScanResult(
@@ -318,6 +311,14 @@ if (!VALID_HOSTS.has(hostname)) {
 
 let scanTimer: ReturnType<typeof setTimeout> | undefined;
 
-setupContentMessageListener();
-setupAutoScan();
-cacheOrderIds();
+async function init() {
+  const raw = await chrome.storage.local.get("siteConfigs");
+  currentConfig =
+    raw && typeof raw === "object" && "siteConfigs" in raw
+      ? (raw as StorageResult).siteConfigs?.[hostname]
+      : undefined;
+  setupContentMessageListener();
+  setupAutoScan();
+  cacheOrderIds();
+}
+init().catch((err) => console.error("[Copilot Doctor] init failed:", err));
