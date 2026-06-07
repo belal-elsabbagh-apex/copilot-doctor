@@ -145,6 +145,65 @@ h1 {
   word-break: break-word;
 }
 
+.output-value-wrap {
+  position: relative;
+}
+
+.output-value-wrap:has(> pre) {
+  display: block;
+}
+
+.output-value-wrap .copy-btn {
+  flex-shrink: 0;
+  background: none;
+  border: none;
+  border-radius: 3px;
+  padding: 2px;
+  cursor: pointer;
+  line-height: 0;
+  color: #64748b;
+  transition: opacity 0.15s;
+}
+
+.output-value-wrap:has(> pre) .copy-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  background: #334155;
+  border: 1px solid #475569;
+  border-radius: 4px;
+  padding: 2px 6px;
+  opacity: 0;
+}
+
+.output-value-wrap:has(> pre):hover .copy-btn {
+  opacity: 1;
+}
+
+.output-value-wrap:has(> pre) .copy-btn:hover {
+  background: #475569;
+  color: #e2e8f0;
+}
+
+.output-value-wrap:not(:has(> pre)) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.output-value-wrap:not(:has(> pre)) .copy-btn {
+  opacity: 0;
+}
+
+.output-value-wrap:not(:has(> pre)):hover .copy-btn {
+  opacity: 1;
+}
+
+.output-value-wrap:not(:has(> pre)) .copy-btn:hover {
+  color: #e2e8f0;
+  background: #334155;
+}
+
 .json-pretty {
   background: #0f172a;
   padding: 6px 8px;

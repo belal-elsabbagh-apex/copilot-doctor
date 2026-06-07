@@ -165,7 +165,7 @@ function renderMatchDetail(container: HTMLElement, match: JobMatch) {
       .filter(([k]) => k.startsWith("out_"))
       .map(
         ([k, v]) =>
-          `<div class="output-row"><span class="output-key">${k}</span><span class="output-value">${formatOutputValue(v)}</span></div>`,
+          `<div class="output-row"><span class="output-key">${k}</span><div class="output-value">${formatOutputValue(v)}</div></div>`,
       )
       .join("");
     container.appendChild(outputFields);
@@ -226,12 +226,15 @@ function highlightJson(obj: unknown): string {
 
 function formatOutputValue(v: unknown): string {
   const parsed = deepParse(v);
-  if (parsed === null) return `<span class="hl-bool">null</span>`;
-  if (typeof parsed === "boolean") return `<span class="hl-bool">${parsed}</span>`;
-  if (typeof parsed === "number") return `<span class="hl-num">${parsed}</span>`;
-  if (typeof parsed === "string") return `<span class="hl-str">${escHtml(parsed)}</span>`;
+  let content: string;
+  if (parsed === null) content = `<span class="hl-bool">null</span>`;
+  else if (typeof parsed === "boolean") content = `<span class="hl-bool">${parsed}</span>`;
+  else if (typeof parsed === "number") content = `<span class="hl-num">${parsed}</span>`;
+  else if (typeof parsed === "string") content = `<span class="hl-str">${escHtml(parsed)}</span>`;
+  else content = `<pre class="json-pretty">${highlightJson(parsed)}</pre>`;
   const raw = JSON.stringify(parsed, null, 2);
-  return `<div class="output-value-wrap"><pre class="json-pretty">${highlightJson(parsed)}</pre><button class="copy-btn" data-copy="${escHtml(raw)}" title="Copy">📋</button></div>`;
+  const icon = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+  return `<div class="output-value-wrap">${content}<button class="copy-btn" data-copy="${escHtml(raw)}" title="Copy">${icon}</button></div>`;
 }
 
 function getStateColor(state: string): string {
@@ -251,8 +254,9 @@ document.addEventListener("click", (e) => {
   const btn = (e.target as HTMLElement).closest("[data-copy]") as HTMLElement | null;
   if (!btn) return;
   navigator.clipboard.writeText(btn.dataset.copy ?? "").then(() => {
-    const orig = btn.textContent;
-    btn.textContent = "✓";
-    setTimeout(() => { btn.textContent = orig; }, 1200);
+    const check = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+    const orig = btn.innerHTML;
+    btn.innerHTML = check;
+    setTimeout(() => { btn.innerHTML = orig; }, 1200);
   });
 });
