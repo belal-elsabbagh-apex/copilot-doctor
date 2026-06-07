@@ -2,7 +2,7 @@
 
 Chrome extension that matches orders on Copilot pages to their corresponding UiPath Orchestrator jobs.
 
-<video src="media/demo.mp4" width="100%" controls />
+<video src="media/demo.mp4" controls></video>
 
 ## Setup
 
