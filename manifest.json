@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Copilot Doctor",
   "description": "Check orders from Copilot against UiPath Orchestrator jobs",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "author": "",
   "icons": {
     "16": "icons/icon16.png",
