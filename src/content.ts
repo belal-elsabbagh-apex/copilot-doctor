@@ -99,13 +99,13 @@ async function scanPage(orderId?: string) {
         if (!fullJob?.OutputArguments) continue;
         try {
           const output = JSON.parse(fullJob.OutputArguments);
-          if (output.out_OrderUid !== selectedOrderId) {
+          if (output.out_OrderUid === selectedOrderId) {
             console.debug(
               "[Copilot Doctor] match found:",
               fullJob.Key || fullJob.Id,
             );
             const videoUrl = await fetchJobVideoUrl(fullJob.Key || "");
-            const jobUrl = fetchJobUrl(fullJob.Key || fullJob.Id || "", config);
+            const jobUrl = await fetchJobUrl(fullJob.Key || fullJob.Id || "");
             matches.push({ job: fullJob, output, videoUrl, jobUrl });
           }
         } catch (parseErr) {
@@ -240,8 +240,9 @@ async function fetchJobVideoUrl(jobKey: string): Promise<string | null> {
     return null;
   }
 }
-function fetchJobUrl(jobKey: string, cfg: SiteConfig): string {
-  return `https://cloud.uipath.com/${cfg.org}/${cfg.tenant}/orchestrator_/jobs(sidepanel:sidepanel/jobs/${jobKey}/details)`;
+async function fetchJobUrl(jobKey: string): Promise<string> {
+  const cfg = await getConfig();
+  return `https://cloud.uipath.com/${cfg!.org}/${cfg!.tenant}/orchestrator_/jobs(sidepanel:sidepanel/jobs/${jobKey}/details)`;
 }
 
 function persistScanResult(
