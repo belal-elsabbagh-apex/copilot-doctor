@@ -213,7 +213,7 @@ function highlightJson(obj: unknown): string {
     /("(?:\\.|[^"\\])*")\s*:/g,
     '<span class="hl-key">$1</span>:',
   ).replace(
-    /:\s*("(?:\\.|[^"\\])*")/g,
+    /:\s*"((?:\\.|[^"\\])*)"/g,
     ':<span class="hl-str">$1</span>',
   ).replace(
     /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
@@ -225,8 +225,9 @@ function highlightJson(obj: unknown): string {
 }
 
 function formatOutputValue(v: unknown): string {
+  const raw = typeof v === "string" ? v : JSON.stringify(v);
   const parsed = deepParse(v);
-  return `<pre class="json-pretty">${highlightJson(parsed)}</pre>`;
+  return `<div class="output-value-wrap"><pre class="json-pretty">${highlightJson(parsed)}</pre><button class="copy-btn" data-copy="${escHtml(raw)}" title="Copy">📋</button></div>`;
 }
 
 function getStateColor(state: string): string {
@@ -235,3 +236,19 @@ function getStateColor(state: string): string {
     "#757575"
   );
 }
+
+function escHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
+  );
+}
+
+document.addEventListener("click", (e) => {
+  const btn = (e.target as HTMLElement).closest("[data-copy]") as HTMLElement | null;
+  if (!btn) return;
+  navigator.clipboard.writeText(btn.dataset.copy ?? "").then(() => {
+    const orig = btn.textContent;
+    btn.textContent = "✓";
+    setTimeout(() => { btn.textContent = orig; }, 1200);
+  });
+});
