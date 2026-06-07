@@ -5,6 +5,14 @@ const VALID_HOSTS = new Set([
   "pre-prod-copilot.apexmedicalai.com",
 ]);
 
+function getConfig(): Promise<SiteConfig | undefined> {
+  return chrome.storage.local.get("siteConfigs").then((raw) =>
+    raw && typeof raw === "object" && "siteConfigs" in raw
+      ? (raw as StorageResult).siteConfigs?.[hostname]
+      : undefined,
+  );
+}
+
 function cacheOrderIds() {
   const cards = document.querySelectorAll<HTMLElement>(".order-card");
   const ids: string[] = [];
@@ -51,11 +59,7 @@ async function scanPage(orderId?: string) {
 
   chrome.runtime.sendMessage({ type: "SCAN_STATUS", phase: "scanning" });
 
-  const raw = await chrome.storage.local.get("siteConfigs");
-  const config =
-    raw && typeof raw === "object" && "siteConfigs" in raw
-      ? (raw as StorageResult).siteConfigs?.[hostname]
-      : undefined;
+  const config = await getConfig();
   console.debug("[Copilot Doctor] config found:", !!config);
 
   if (!config) {
@@ -95,13 +99,13 @@ async function scanPage(orderId?: string) {
         if (!fullJob?.OutputArguments) continue;
         try {
           const output = JSON.parse(fullJob.OutputArguments);
-          if (output.out_OrderUid === selectedOrderId) {
+          if (output.out_OrderUid !== selectedOrderId) {
             console.debug(
               "[Copilot Doctor] match found:",
               fullJob.Key || fullJob.Id,
             );
             const videoUrl = await fetchJobVideoUrl(fullJob.Key || "");
-            const jobUrl = `https://cloud.uipath.com/${config.org}/${config.tenant}/orchestrator_/jobs(sidepanel:sidepanel/jobs/${fullJob.Key || fullJob.Id}/details)`;
+            const jobUrl = fetchJobUrl(fullJob.Key || fullJob.Id || "", config);
             matches.push({ job: fullJob, output, videoUrl, jobUrl });
           }
         } catch (parseErr) {
@@ -235,6 +239,9 @@ async function fetchJobVideoUrl(jobKey: string): Promise<string | null> {
     console.debug("[Copilot Doctor] no video for job", jobKey, err);
     return null;
   }
+}
+function fetchJobUrl(jobKey: string, cfg: SiteConfig): string {
+  return `https://cloud.uipath.com/${cfg.org}/${cfg.tenant}/orchestrator_/jobs(sidepanel:sidepanel/jobs/${jobKey}/details)`;
 }
 
 function persistScanResult(
