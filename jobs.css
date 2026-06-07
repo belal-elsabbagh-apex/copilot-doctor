@@ -7,8 +7,8 @@
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   font-size: 13px;
-  background: #f5f5f5;
-  color: #333;
+  background: #0f172a;
+  color: #e2e8f0;
 }
 
 #app {
@@ -20,10 +20,11 @@ body {
 h1 {
   font-size: 18px;
   margin-bottom: 4px;
+  color: #22c55e;
 }
 
 .subtitle {
-  color: #888;
+  color: #64748b;
   font-size: 12px;
   margin-bottom: 16px;
 }
@@ -39,8 +40,14 @@ h1 {
 #filters select {
   padding: 6px 10px;
   font-size: 12px;
-  border: 1px solid #ccc;
+  border: 1px solid #475569;
   border-radius: 4px;
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+#filters input::placeholder {
+  color: #475569;
 }
 
 #filters input {
@@ -55,16 +62,17 @@ h1 {
 }
 
 .job-card {
-  background: #fff;
+  background: #1e293b;
   border-radius: 8px;
   padding: 12px 16px;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #334155;
   cursor: pointer;
   transition: box-shadow 0.15s;
 }
 
 .job-card:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  border-color: #475569;
 }
 
 .job-card-header {
@@ -78,7 +86,7 @@ h1 {
   display: flex;
   gap: 16px;
   font-size: 11px;
-  color: #888;
+  color: #64748b;
   flex-wrap: wrap;
 }
 
@@ -98,13 +106,13 @@ h1 {
 .job-order-id {
   font-family: monospace;
   font-size: 11px;
-  color: #555;
+  color: #94a3b8;
 }
 
 .job-expanded {
   margin-top: 10px;
   padding-top: 10px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #334155;
 }
 
 .job-expanded .output-fields {
@@ -116,24 +124,24 @@ h1 {
   flex-direction: column;
   gap: 2px;
   padding: 4px 0;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid #1e293b;
 }
 
 .job-expanded .output-key {
   font-weight: 600;
-  color: #555;
+  color: #94a3b8;
   font-size: 10px;
   text-transform: uppercase;
   letter-spacing: 0.3px;
 }
 
 .job-expanded .output-value {
-  color: #333;
+  color: #e2e8f0;
   word-break: break-word;
 }
 
 .json-pretty {
-  background: #f0f0f0;
+  background: #0f172a;
   padding: 6px 8px;
   border-radius: 4px;
   font-family: monospace;
@@ -143,6 +151,7 @@ h1 {
   overflow-x: auto;
   text-align: left;
   margin: 0;
+  border: 1px solid #334155;
 }
 
 .video-player {
@@ -153,7 +162,7 @@ h1 {
 
 .empty {
   text-align: center;
-  color: #888;
+  color: #64748b;
   padding: 40px 0;
   font-size: 13px;
 }
@@ -161,7 +170,7 @@ h1 {
 .job-card-extra {
   margin-top: 6px;
   font-size: 11px;
-  color: #1565c0;
+  color: #3b82f6;
   font-weight: 600;
 }
 
@@ -181,7 +190,7 @@ h1 {
 }
 
 .match-dot.active {
-  border-color: #333;
+  border-color: #22c55e;
 }
 
 #clear-btn {
@@ -190,11 +199,11 @@ h1 {
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  background: #e53935;
+  background: #dc2626;
   color: #fff;
   font-weight: 600;
 }
 
 #clear-btn:hover {
-  background: #c62828;
+  background: #ef4444;
 }
