@@ -239,8 +239,8 @@ function highlightJson(obj: unknown): string {
 }
 
 function formatOutputValue(v: unknown): string {
-  const raw = typeof v === "string" ? v : JSON.stringify(v);
   const parsed = deepParse(v);
+  const raw = JSON.stringify(parsed, null, 2);
   return `<div class="output-value-wrap"><pre class="json-pretty">${highlightJson(parsed)}</pre><button class="copy-btn" data-copy="${escHtml(raw)}" title="Copy">📋</button></div>`;
 }
 
