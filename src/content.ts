@@ -82,7 +82,7 @@ async function scanPage(orderId?: string) {
     console.error("[Copilot Doctor] fetchJobsSince threw:", err);
   }
 
-  let matches: JobMatch[] = [];
+  const matches: JobMatch[] = [];
   if (selectedOrderId && !fetchError && jobs.length > 0) {
     console.debug("[Copilot Doctor] searching for matching jobs...");
     for (let i = 0; i < jobs.length; i += 10) {
@@ -142,7 +142,7 @@ function getSelectedCardDate(card: Element | null): Date {
   const parts = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
   if (parts) {
     const d = new Date(+parts[3], +parts[1] - 1, +parts[2]);
-    if (!isNaN(d.getTime())) {
+    if (!Number.isNaN(d.getTime())) {
       d.setHours(0, 0, 0, 0);
       console.debug("[Copilot Doctor] card date:", d.toISOString());
       return d;

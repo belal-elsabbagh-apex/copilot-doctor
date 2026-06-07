@@ -1,4 +1,4 @@
-(window as any).ScanCache = {
+window.ScanCache = {
   set(result: ScanResult, hostname: string): Promise<void> {
     return chrome.storage.local.set({ latestScanResult: { ...result, cachedHost: hostname } });
   },

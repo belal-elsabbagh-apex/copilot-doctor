@@ -57,11 +57,14 @@ async function handleUiPathRequest(
       `https://cloud.uipath.com/${config.org}/${config.tenant}/${apiPath}`,
     );
     if (params) {
-      Object.entries(params).forEach(([k, v]) =>
-        url.searchParams.append(k, v),
-      );
+      for (const [k, v] of Object.entries(params)) {
+        url.searchParams.append(k, v);
+      }
     }
-    console.debug("[Bg] Fetching:", url.toString().replace(config.token, "***"));
+    console.debug(
+      "[Bg] Fetching:",
+      url.toString().replace(config.token, "***"),
+    );
 
     const response = await fetch(url.toString(), {
       headers: {
