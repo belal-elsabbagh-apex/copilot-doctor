@@ -24,7 +24,8 @@
         "https://pre-prod.apexmedicalai.com/*",
         "https://pre-prod-copilot.apexmedicalai.com/*"
       ],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "type": "module"
     }
   ],
   "options_page": "options.html",

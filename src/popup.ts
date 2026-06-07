@@ -1,5 +1,7 @@
 export {};
 
+import { getScanCache } from "./cache.js";
+
 const configStatus = document.getElementById("config-status");
 const content = document.getElementById("content");
 const pageInfo = document.getElementById("page-info");
@@ -78,8 +80,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  chrome.storage.local.get("latestScanResult", (data) => {
-    const cached = (data as { latestScanResult?: ScanResult & { cachedHost?: string } }).latestScanResult;
+  getScanCache().then((cached) => {
     if (cached && cached.cachedHost === currentHost && cached.selectedOrderId) {
       selectedMatchIndex = 0;
       renderResults(cached as ScanResult);
