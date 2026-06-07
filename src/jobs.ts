@@ -226,6 +226,10 @@ function highlightJson(obj: unknown): string {
 
 function formatOutputValue(v: unknown): string {
   const parsed = deepParse(v);
+  if (parsed === null) return `<span class="hl-bool">null</span>`;
+  if (typeof parsed === "boolean") return `<span class="hl-bool">${parsed}</span>`;
+  if (typeof parsed === "number") return `<span class="hl-num">${parsed}</span>`;
+  if (typeof parsed === "string") return `<span class="hl-str">${escHtml(parsed)}</span>`;
   const raw = JSON.stringify(parsed, null, 2);
   return `<div class="output-value-wrap"><pre class="json-pretty">${highlightJson(parsed)}</pre><button class="copy-btn" data-copy="${escHtml(raw)}" title="Copy">📋</button></div>`;
 }
