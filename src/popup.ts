@@ -206,31 +206,49 @@ function sortOutputEntries(entries: [string, unknown][]): [string, unknown][] {
   });
 }
 
-function highlightJson(obj: unknown): string {
-  const json = JSON.stringify(obj, null, 2);
-  return json.replace(
-    /("(?:\\.|[^"\\])*")\s*:/g,
-    '<span class="hl-key">$1</span>:',
-  ).replace(
-    /:\s*("(?:\\.|[^"\\])*")/g,
-    ':<span class="hl-str">$1</span>',
-  ).replace(
-    /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
-    ':<span class="hl-num">$1</span>',
-  ).replace(
-    /:\s*(true|false|null)\b/g,
-    ':<span class="hl-bool">$1</span>',
-  );
+function deepParse(v: unknown): unknown {
+  if (typeof v === "string") {
+    try { return deepParse(JSON.parse(v)); } catch { return v; }
+  }
+  if (Array.isArray(v)) return v.map(deepParse);
+  if (v && typeof v === "object") {
+    const o: Record<string, unknown> = {};
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      o[k] = deepParse(val);
+    }
+    return o;
+  }
+  return v;
+}
+
+function renderJson(v: unknown, indent = 0): string {
+  const pad = "  ".repeat(indent);
+  if (v === null) return `<span class="hl-bool">null</span>`;
+  if (typeof v === "boolean") return `<span class="hl-bool">${v}</span>`;
+  if (typeof v === "number") return `<span class="hl-num">${v}</span>`;
+  if (typeof v === "string") return `<span class="hl-str">${JSON.stringify(v)}</span>`;
+  if (Array.isArray(v)) {
+    if (v.length === 0) return `<span class="hl-punc">[ ]</span>`;
+    const items = v.map(item =>
+      `${pad}  <div class="hl-row">${renderJson(item, indent + 1)}</div>`
+    ).join("\n");
+    return `<span class="hl-punc">[</span>\n${items}\n${pad}<span class="hl-punc">]</span>`;
+  }
+  if (typeof v === "object") {
+    const entries = Object.entries(v as Record<string, unknown>);
+    if (entries.length === 0) return `<span class="hl-punc">{ }</span>`;
+    const items = entries.map(([k, val]) =>
+      `${pad}  <div class="hl-row"><span class="hl-key">${JSON.stringify(k)}</span><span class="hl-punc">: </span>${renderJson(val, indent + 1)}</div>`
+    ).join("\n");
+    return `<span class="hl-punc">{</span>\n${items}\n${pad}<span class="hl-punc">}</span>`;
+  }
+  return String(v);
 }
 
 function formatOutputValue(v: unknown): string {
-  if (typeof v !== "string") return String(v);
-  try {
-    const parsed = JSON.parse(v);
-    return `<pre class="json-pretty">${highlightJson(parsed)}</pre>`;
-  } catch {
-    return v;
-  }
+  const parsed = deepParse(v);
+  const html = renderJson(parsed);
+  return `<div class="json-tree">${html}</div>`;
 }
 
 function getStateColor(state: string): string {
