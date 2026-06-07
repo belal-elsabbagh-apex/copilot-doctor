@@ -283,6 +283,24 @@ function sendUiPathRequest(
   });
 }
 
+function setupMessageListener() {
+  chrome.runtime.onMessage.addListener(
+    (
+      message: unknown,
+      _sender: chrome.runtime.MessageSender,
+      sendResponse: (response?: unknown) => void,
+    ) => {
+      const msg = message as { type: string; orderId?: string };
+      console.debug("[Copilot Doctor] message received:", msg);
+      if (msg?.type === "SCAN_ORDERS") {
+        scanPage(msg.orderId).then(sendResponse);
+        return true;
+      }
+      return undefined;
+    },
+  );
+}
+
 console.debug("[Copilot Doctor] content script loaded");
 console.debug("[Copilot Doctor] hostname:", hostname);
 
@@ -292,21 +310,6 @@ if (!VALID_HOSTS.has(hostname)) {
 
 let scanTimer: ReturnType<typeof setTimeout> | undefined;
 
-chrome.runtime.onMessage.addListener(
-  (
-    message: unknown,
-    _sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ) => {
-    const msg = message as { type: string; orderId?: string };
-    console.debug("[Copilot Doctor] message received:", msg);
-    if (msg?.type === "SCAN_ORDERS") {
-      scanPage(msg.orderId).then(sendResponse);
-      return true;
-    }
-    return undefined;
-  },
-);
-
+setupMessageListener();
 setupAutoScan();
 cacheOrderIds();
