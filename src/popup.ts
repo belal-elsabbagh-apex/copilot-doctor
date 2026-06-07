@@ -15,7 +15,6 @@ document.getElementById("open-jobs")?.addEventListener("click", () => {
 });
 
 async function triggerScan(orderId?: string) {
-  if (pageInfo) pageInfo.textContent = "Scanning...";
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
   if (!tab?.id) {
@@ -33,7 +32,10 @@ async function triggerScan(orderId?: string) {
   });
 }
 
-document.getElementById("scan-page")?.addEventListener("click", () => triggerScan());
+document.getElementById("scan-page")?.addEventListener("click", () => {
+  if (pageInfo) pageInfo.textContent = "Scanning...";
+  triggerScan();
+});
 
 const manifest = chrome.runtime.getManifest();
 const titleEl = document.querySelector("h1");
