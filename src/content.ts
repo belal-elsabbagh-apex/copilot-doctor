@@ -129,7 +129,8 @@ async function scanPage(orderId?: string) {
               fullJob.Key || fullJob.Id,
             );
             const videoUrl = await fetchJobVideoUrl(fullJob.Key || "");
-            matches.push({ job: fullJob, output, videoUrl });
+            const jobUrl = `https://cloud.uipath.com/${config.org}/${config.tenant}/orchestrator_/jobs/${fullJob.Id || fullJob.Key}`;
+            matches.push({ job: fullJob, output, videoUrl, jobUrl });
           }
         } catch (parseErr) {
           console.debug(

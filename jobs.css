@@ -114,6 +114,15 @@ h1 {
   color: #94a3b8;
 }
 
+.job-link {
+  color: #3b82f6;
+  text-decoration: none;
+}
+
+.job-link:hover {
+  color: #60a5fa;
+}
+
 .job-expanded {
   margin-top: 10px;
   padding-top: 10px;

@@ -89,6 +89,16 @@ h1 {
   color: #e2e8f0;
 }
 
+.job-link {
+  color: #3b82f6;
+  text-decoration: none;
+  font-size: 13px;
+}
+
+.job-link:hover {
+  color: #60a5fa;
+}
+
 .job-item {
   display: flex;
   align-items: center;

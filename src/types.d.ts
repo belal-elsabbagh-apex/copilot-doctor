@@ -30,6 +30,7 @@ interface JobMatch {
   job: UiPathJob;
   output: Record<string, unknown> | null;
   videoUrl: string | null;
+  jobUrl?: string;
 }
 
 interface ScanResult {
