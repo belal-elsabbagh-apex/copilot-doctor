@@ -1,38 +1,9 @@
-
-console.debug("[Copilot Doctor] content script loaded");
-
 const hostname = location.hostname;
-console.debug("[Copilot Doctor] hostname:", hostname);
 
 const VALID_HOSTS = new Set([
   "copilot.apexmedical.ai",
-  "pre-prod.apexmedicalai.com",
   "pre-prod-copilot.apexmedicalai.com",
 ]);
-if (!VALID_HOSTS.has(hostname)) {
-  console.warn(`[Copilot Doctor] unsupported host "${hostname}" — skipping`);
-}
-
-let scanTimer: ReturnType<typeof setTimeout> | undefined;
-
-chrome.runtime.onMessage.addListener(
-  (
-    message: unknown,
-    _sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ) => {
-    const msg = message as { type: string; orderId?: string };
-    console.debug("[Copilot Doctor] message received:", msg);
-    if (msg?.type === "SCAN_ORDERS") {
-      scanPage(msg.orderId).then(sendResponse);
-      return true;
-    }
-    return undefined;
-  },
-);
-
-setupAutoScan();
-cacheOrderIds();
 
 function cacheOrderIds() {
   const cards = document.querySelectorAll<HTMLElement>(".order-card");
@@ -311,3 +282,31 @@ function sendUiPathRequest(
     );
   });
 }
+
+console.debug("[Copilot Doctor] content script loaded");
+console.debug("[Copilot Doctor] hostname:", hostname);
+
+if (!VALID_HOSTS.has(hostname)) {
+  console.error(`[Copilot Doctor] unsupported host "${hostname}" — skipping`);
+}
+
+let scanTimer: ReturnType<typeof setTimeout> | undefined;
+
+chrome.runtime.onMessage.addListener(
+  (
+    message: unknown,
+    _sender: chrome.runtime.MessageSender,
+    sendResponse: (response?: unknown) => void,
+  ) => {
+    const msg = message as { type: string; orderId?: string };
+    console.debug("[Copilot Doctor] message received:", msg);
+    if (msg?.type === "SCAN_ORDERS") {
+      scanPage(msg.orderId).then(sendResponse);
+      return true;
+    }
+    return undefined;
+  },
+);
+
+setupAutoScan();
+cacheOrderIds();
