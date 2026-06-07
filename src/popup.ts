@@ -128,6 +128,7 @@ function renderResults(result: ScanResult) {
     return;
   }
 
+  if (pageInfo) pageInfo.textContent = "";
   const orderEl = document.createElement("div");
   orderEl.className = "order";
   orderEl.innerHTML = `<strong>Selected Order</strong><br>${selectedOrderId}`;
