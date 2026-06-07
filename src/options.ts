@@ -58,7 +58,7 @@ function renderList() {
     card.className = "site-card";
     card.innerHTML = `
       <div class="site-host">${host}</div>
-      <div class="site-summary">${cfg.org} / ${cfg.tenant} / ${cfg.folder || "—"}</div>
+      <div class="site-summary">${cfg.org} / ${cfg.tenant} / ${cfg.folder}</div>
     `;
     card.addEventListener("click", () => editSite(host));
     sitesContainer?.appendChild(card);
@@ -83,10 +83,12 @@ function editSite(host: string) {
 }
 
 function clearEditor() {
-  (["hostname", "org", "tenant", "folder", "token"] as const).forEach((id) => {
+  (["hostname", "org", "folder", "token"] as const).forEach((id) => {
     const el = document.getElementById(id) as HTMLInputElement | null;
     if (el) el.value = "";
   });
+  const tenantEl = document.getElementById("tenant") as HTMLInputElement | null;
+  if (tenantEl) tenantEl.value = "DefaultTenant";
 }
 
 function showEditor() {
@@ -122,12 +124,17 @@ function saveCurrent() {
   const folderEl = document.getElementById("folder") as HTMLInputElement | null;
   const tokenEl = document.getElementById("token") as HTMLInputElement | null;
 
-  allConfigs[host] = {
-    org: orgEl?.value.trim() ?? "",
-    tenant: tenantEl?.value.trim() ?? "",
-    folder: folderEl?.value.trim() ?? "",
-    token: tokenEl?.value.trim() ?? "",
-  };
+  const org = orgEl?.value.trim() ?? "";
+  const tenant = tenantEl?.value.trim() ?? "";
+  const folder = folderEl?.value.trim() ?? "";
+  const token = tokenEl?.value.trim() ?? "";
+
+  if (!org || !tenant || !folder || !token) {
+    showStatus("All fields are required", "error");
+    return;
+  }
+
+  allConfigs[host] = { org, tenant, folder, token };
 
   if (editingHost && editingHost !== host) {
     delete allConfigs[editingHost];
@@ -141,16 +148,18 @@ function saveCurrent() {
 async function testConnection() {
   const orgEl = document.getElementById("org") as HTMLInputElement | null;
   const tenantEl = document.getElementById("tenant") as HTMLInputElement | null;
+  const folderEl = document.getElementById("folder") as HTMLInputElement | null;
   const tokenEl = document.getElementById("token") as HTMLInputElement | null;
   const hostnameEl = document.getElementById("hostname") as HTMLInputElement | null;
 
   const org = orgEl?.value.trim() ?? "";
   const tenant = tenantEl?.value.trim() ?? "";
+  const folder = folderEl?.value.trim() ?? "";
   const token = tokenEl?.value.trim() ?? "";
   const hostname = hostnameEl?.value.trim() ?? "";
 
-  if (!hostname || !org || !tenant || !token) {
-    showStatus("Fill in hostname, org, tenant, and token first", "error");
+  if (!hostname || !org || !tenant || !folder || !token) {
+    showStatus("Fill in all fields first", "error");
     return;
   }
 

@@ -28,7 +28,7 @@ Each config ties a **hostname** (e.g. `copilot.example.com`) to a UiPath environ
 | **Hostname** | The Copilot page domain this config applies to |
 | **Organization** | Your UiPath org slug |
 | **Tenant** | Your UiPath tenant |
-| **Folder** | Orchestrator folder (optional) |
+| **Folder** | Orchestrator folder |
 | **Personal Access Token** | UiPath PAT |
 
 ### 3. Create a PAT

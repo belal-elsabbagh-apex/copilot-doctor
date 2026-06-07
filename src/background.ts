@@ -37,12 +37,13 @@ async function handleUiPathRequest(
         ? (raw as StorageResult).siteConfigs?.[hostname]
         : undefined;
 
-    if (!config?.org || !config?.tenant || !config?.token) {
+    if (!config?.org || !config?.tenant || !config?.folder || !config?.token) {
       const err = `No config found for "${hostname}". Open options to add one.`;
       console.error("[Bg] Config missing:", {
         hostname,
         hasOrg: !!config?.org,
         hasTenant: !!config?.tenant,
+        hasFolder: !!config?.folder,
         hasToken: !!config?.token,
       });
       sendResponse({ error: err });
