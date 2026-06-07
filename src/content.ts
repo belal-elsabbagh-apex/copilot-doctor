@@ -283,7 +283,7 @@ function sendUiPathRequest(
   });
 }
 
-function setupMessageListener() {
+function setupContentMessageListener() {
   chrome.runtime.onMessage.addListener(
     (
       message: unknown,
@@ -310,6 +310,6 @@ if (!VALID_HOSTS.has(hostname)) {
 
 let scanTimer: ReturnType<typeof setTimeout> | undefined;
 
-setupMessageListener();
+setupContentMessageListener();
 setupAutoScan();
 cacheOrderIds();

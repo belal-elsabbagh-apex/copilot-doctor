@@ -1,27 +1,65 @@
 export {};
 
-chrome.runtime.onInstalled.addListener((details) => {
-  if (details.reason === "install") {
-    chrome.storage.local.set({ siteConfigs: {} });
-    chrome.tabs.create({ url: "options.html" });
-  }
-  migrateOldConfig();
-});
+function migrateOldConfig() {
+  chrome.storage.local.get(
+    ["org", "tenant", "folder", "token", "orderSelector"],
+    (data) => {
+      const d = data as Record<string, string | undefined>;
+      if (!("org" in d) && !("tenant" in d)) return;
+      if (!d.org && !d.tenant) return;
 
-chrome.runtime.onMessage.addListener(
-  (
-    message: unknown,
-    _sender: chrome.runtime.MessageSender,
-    sendResponse: (response?: unknown) => void,
-  ) => {
-    const msg = message as UiPathRequestBody & { hostname: string };
-    if (msg?.type === "UIPATH_REQUEST") {
-      handleUiPathRequest(msg, sendResponse);
-      return true;
+      chrome.storage.local.get("siteConfigs", (result) => {
+        const r = result as { siteConfigs?: Record<string, SiteConfig> };
+        if (r.siteConfigs && Object.keys(r.siteConfigs).length > 0) return;
+
+        chrome.storage.local.set({
+          siteConfigs: {
+            "copilot.example.com": {
+              org: d.org || "",
+              tenant: d.tenant || "",
+              folder: d.folder || "",
+              token: d.token || "",
+            },
+          },
+        });
+        chrome.storage.local.remove([
+          "org",
+          "tenant",
+          "folder",
+          "token",
+          "orderSelector",
+        ]);
+      });
+    },
+  );
+}
+
+function setupBgOnInstalledListener() {
+  chrome.runtime.onInstalled.addListener((details) => {
+    if (details.reason === "install") {
+      chrome.storage.local.set({ siteConfigs: {} });
+      chrome.tabs.create({ url: "options.html" });
     }
-    return undefined;
-  },
-);
+    migrateOldConfig();
+  });
+}
+
+function setupBgMessageListener() {
+  chrome.runtime.onMessage.addListener(
+    (
+      message: unknown,
+      _sender: chrome.runtime.MessageSender,
+      sendResponse: (response?: unknown) => void,
+    ) => {
+      const msg = message as UiPathRequestBody & { hostname: string };
+      if (msg?.type === "UIPATH_REQUEST") {
+        handleUiPathRequest(msg, sendResponse);
+        return true;
+      }
+      return undefined;
+    },
+  );
+}
 
 async function handleUiPathRequest(
   msg: UiPathRequestBody & { hostname: string },
@@ -93,36 +131,5 @@ async function handleUiPathRequest(
   }
 }
 
-function migrateOldConfig() {
-  chrome.storage.local.get(
-    ["org", "tenant", "folder", "token", "orderSelector"],
-    (data) => {
-      const d = data as Record<string, string | undefined>;
-      if (!("org" in d) && !("tenant" in d)) return;
-      if (!d.org && !d.tenant) return;
-
-      chrome.storage.local.get("siteConfigs", (result) => {
-        const r = result as { siteConfigs?: Record<string, SiteConfig> };
-        if (r.siteConfigs && Object.keys(r.siteConfigs).length > 0) return;
-
-        chrome.storage.local.set({
-          siteConfigs: {
-            "copilot.example.com": {
-              org: d.org || "",
-              tenant: d.tenant || "",
-              folder: d.folder || "",
-              token: d.token || "",
-            },
-          },
-        });
-        chrome.storage.local.remove([
-          "org",
-          "tenant",
-          "folder",
-          "token",
-          "orderSelector",
-        ]);
-      });
-    },
-  );
-}
+setupBgOnInstalledListener();
+setupBgMessageListener();
