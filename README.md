@@ -5,6 +5,15 @@ Chrome extension that matches orders on Copilot pages to their corresponding UiP
 ## Setup
 
 ### 1. Install
+
+**Option A — GitHub Releases (recommended)**
+1. Go to the [Releases page](https://github.com/belal-elsabbagh-apex/copilot-doctor/releases)
+2. Download the latest `copilot-doctor.zip`
+3. Unzip it to a folder
+4. Go to `chrome://extensions`, enable **Developer mode**
+5. Click **Load unpacked** and select the extracted folder
+
+**Option B — Build from source**
 1. Run `npm run build` (or `npm run pack` for a `.zip`)
 2. Go to `chrome://extensions`, enable **Developer mode**
 3. Click **Load unpacked** and select the `dist/` folder
