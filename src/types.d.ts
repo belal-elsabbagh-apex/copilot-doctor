@@ -38,6 +38,7 @@ interface ScanResult {
   matches: JobMatch[];
   jobCount: number;
   scanError: string | null;
+  cachedHost?: string;
 }
 
 interface SavedJob {

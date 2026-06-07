@@ -52,6 +52,7 @@ function setupAutoScan() {
     );
     const id = selected?.id || null;
     if (id && id !== lastId) {
+      chrome.storage.local.remove("latestScanResult");
       lastId = id;
       clearTimeout(scanTimer);
       scanTimer = setTimeout(() => {
@@ -149,6 +150,7 @@ async function scanPage(orderId?: string) {
     matches,
     jobCount: jobs.length,
     scanError: fetchError,
+    cachedHost: hostname,
   };
   chrome.runtime.sendMessage({ type: "SCAN_RESULTS", ...result });
   chrome.storage.local.set({ latestScanResult: result });

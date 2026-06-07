@@ -78,7 +78,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  triggerScan();
+  chrome.storage.local.get("latestScanResult", (data) => {
+    const cached = (data as { latestScanResult?: ScanResult & { cachedHost?: string } }).latestScanResult;
+    if (cached && cached.cachedHost === currentHost && cached.selectedOrderId) {
+      selectedMatchIndex = 0;
+      renderResults(cached as ScanResult);
+      return;
+    }
+    triggerScan();
+  });
 });
 
 chrome.runtime.onMessage.addListener((message: unknown) => {
