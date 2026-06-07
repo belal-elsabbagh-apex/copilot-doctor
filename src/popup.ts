@@ -33,7 +33,6 @@ async function triggerScan(orderId?: string) {
 }
 
 document.getElementById("scan-page")?.addEventListener("click", () => {
-  if (pageInfo) pageInfo.textContent = "Scanning...";
   triggerScan();
 });
 
@@ -84,10 +83,17 @@ chrome.runtime.onMessage.addListener((message: unknown) => {
     selectedMatchIndex = 0;
     renderResults(message as ScanResult);
   }
+  if (msg?.type === "SCAN_STATUS") {
+    const status = msg as { type: string; phase: string };
+    showStatusIndicator(status.phase);
+  }
 });
 
 function renderResults(result: ScanResult) {
   if (!content) return;
+  const existingStatus = content.querySelector(".scan-status");
+  if (existingStatus) existingStatus.remove();
+
   let resultsContainer = content.querySelector(".scan-results") as HTMLElement | null;
   if (!resultsContainer) {
     resultsContainer = document.createElement("div");
@@ -258,6 +264,21 @@ function getStateColor(state: string): string {
     { Successful: "#4CAF50", Faulted: "#F44336", Stopped: "#FF9800" }[state] ||
     "#757575"
   );
+}
+
+function showStatusIndicator(phase: string) {
+  if (!content) return;
+  let el = content.querySelector(".scan-status") as HTMLElement | null;
+  if (!el) {
+    el = document.createElement("div");
+    el.className = "scan-status";
+    content.prepend(el);
+  }
+  const labels: Record<string, string> = {
+    scanning: "Scanning order",
+    fetching: "Fetching job data",
+  };
+  el.innerHTML = `<span class="spinner"></span> ${labels[phase] || phase}...`;
 }
 
 function escHtml(s: string): string {

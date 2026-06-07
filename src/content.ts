@@ -77,6 +77,8 @@ function setupAutoScan() {
 async function scanPage(orderId?: string) {
   console.debug("[Copilot Doctor] scanPage() started");
 
+  chrome.runtime.sendMessage({ type: "SCAN_STATUS", phase: "scanning" });
+
   const raw = await chrome.storage.local.get("siteConfigs");
   const config =
     raw && typeof raw === "object" && "siteConfigs" in raw
@@ -100,6 +102,7 @@ async function scanPage(orderId?: string) {
   let jobs: UiPathJob[] = [];
   let fetchError: string | null = null;
   try {
+    chrome.runtime.sendMessage({ type: "SCAN_STATUS", phase: "fetching" });
     jobs = await fetchJobsSince(config, cardDate, selectedOrderId);
     console.debug("[Copilot Doctor] jobs fetched:", jobs.length);
   } catch (err) {
