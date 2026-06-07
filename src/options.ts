@@ -52,7 +52,7 @@ function renderList() {
   if (sitesContainer) sitesContainer.innerHTML = "";
   if (emptyMsg) emptyMsg.style.display = hosts.length === 0 ? "block" : "none";
 
-  hosts.sort().forEach((host) => {
+  for (const host of hosts.sort()) {
     const cfg = allConfigs[host];
     const card = document.createElement("div");
     card.className = "site-card";
@@ -62,14 +62,16 @@ function renderList() {
     `;
     card.addEventListener("click", () => editSite(host));
     sitesContainer?.appendChild(card);
-  });
+  }
 }
 
 function editSite(host: string) {
   editingHost = host;
   if (editorTitle) editorTitle.textContent = `Edit: ${host}`;
   const cfg = allConfigs[host];
-  const hostnameEl = document.getElementById("hostname") as HTMLInputElement | null;
+  const hostnameEl = document.getElementById(
+    "hostname",
+  ) as HTMLInputElement | null;
   const orgEl = document.getElementById("org") as HTMLInputElement | null;
   const tenantEl = document.getElementById("tenant") as HTMLInputElement | null;
   const folderEl = document.getElementById("folder") as HTMLInputElement | null;
@@ -83,10 +85,10 @@ function editSite(host: string) {
 }
 
 function clearEditor() {
-  (["hostname", "org", "folder", "token"] as const).forEach((id) => {
+  for (const id of ["hostname", "org", "folder", "token"] as const) {
     const el = document.getElementById(id) as HTMLInputElement | null;
     if (el) el.value = "";
-  });
+  }
   const tenantEl = document.getElementById("tenant") as HTMLInputElement | null;
   if (tenantEl) tenantEl.value = "DefaultTenant";
 }
@@ -150,7 +152,9 @@ async function testConnection() {
   const tenantEl = document.getElementById("tenant") as HTMLInputElement | null;
   const folderEl = document.getElementById("folder") as HTMLInputElement | null;
   const tokenEl = document.getElementById("token") as HTMLInputElement | null;
-  const hostnameEl = document.getElementById("hostname") as HTMLInputElement | null;
+  const hostnameEl = document.getElementById(
+    "hostname",
+  ) as HTMLInputElement | null;
 
   const org = orgEl?.value.trim() ?? "";
   const tenant = tenantEl?.value.trim() ?? "";
@@ -183,13 +187,10 @@ async function testConnection() {
   );
 }
 
-function showStatus(
-  msg: string,
-  type: "success" | "error" | "info",
-) {
+function showStatus(msg: string, type: "success" | "error" | "info") {
   if (statusEl) {
     statusEl.textContent = msg;
-    statusEl.className = type + " show";
+    statusEl.className = `${type} show`;
   }
   setTimeout(() => {
     if (statusEl) {

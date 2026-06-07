@@ -21,15 +21,20 @@ async function triggerScan(orderId?: string) {
     if (pageInfo) pageInfo.textContent = "No active tab ID found.";
     return;
   }
-  chrome.tabs.sendMessage(tab.id, { type: "SCAN_ORDERS", orderId }, (response) => {
-    const resp = response as { error?: string } | undefined;
-    if (chrome.runtime.lastError) {
-      if (pageInfo)
-        pageInfo.textContent = chrome.runtime.lastError.message || "Unknown error";
-      return;
-    }
-    if (resp?.error && pageInfo) pageInfo.textContent = resp.error;
-  });
+  chrome.tabs.sendMessage(
+    tab.id,
+    { type: "SCAN_ORDERS", orderId },
+    (response) => {
+      const resp = response as { error?: string } | undefined;
+      if (chrome.runtime.lastError) {
+        if (pageInfo)
+          pageInfo.textContent =
+            chrome.runtime.lastError.message || "Unknown error";
+        return;
+      }
+      if (resp?.error && pageInfo) pageInfo.textContent = resp.error;
+    },
+  );
 }
 
 document.getElementById("scan-page")?.addEventListener("click", () => {
@@ -106,7 +111,9 @@ function renderResults(result: ScanResult) {
   const existingStatus = content.querySelector(".scan-status");
   if (existingStatus) existingStatus.remove();
 
-  let resultsContainer = content.querySelector(".scan-results") as HTMLElement | null;
+  let resultsContainer = content.querySelector(
+    ".scan-results",
+  ) as HTMLElement | null;
   if (!resultsContainer) {
     resultsContainer = document.createElement("div");
     resultsContainer.className = "scan-results";
@@ -149,7 +156,7 @@ function renderResults(result: ScanResult) {
       tab.innerHTML = `<span class="match-tab-dot" style="background:${getStateColor(m.job.State)}"></span> ${m.job.Key || m.job.Id || `#${i + 1}`}`;
       tab.addEventListener("click", () => {
         selectedMatchIndex = i;
-        tabs.forEach((t) => t.classList.remove("active"));
+        for (const t of tabs) t.classList.remove("active");
         tab.classList.add("active");
         renderMatchDetail(m, resultsContainer);
       });
@@ -230,7 +237,11 @@ function sortOutputEntries(entries: [string, unknown][]): [string, unknown][] {
 
 function deepParse(v: unknown): unknown {
   if (typeof v === "string") {
-    try { return deepParse(JSON.parse(v)); } catch { return v; }
+    try {
+      return deepParse(JSON.parse(v));
+    } catch {
+      return v;
+    }
   }
   if (Array.isArray(v)) return v.map(deepParse);
   if (v && typeof v === "object") {
@@ -245,31 +256,30 @@ function deepParse(v: unknown): unknown {
 
 function highlightJson(obj: unknown): string {
   const json = JSON.stringify(obj, null, 2);
-  return json.replace(
-    /("(?:\\.|[^"\\])*")\s*:/g,
-    '<span class="hl-key">$1</span>:',
-  ).replace(
-    /:\s*"((?:\\.|[^"\\])*)"/g,
-    ':<span class="hl-str">$1</span>',
-  ).replace(
-    /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
-    ':<span class="hl-num">$1</span>',
-  ).replace(
-    /:\s*(true|false|null)\b/g,
-    ':<span class="hl-bool">$1</span>',
-  );
+  return json
+    .replace(/("(?:\\.|[^"\\])*")\s*:/g, '<span class="hl-key">$1</span>:')
+    .replace(/:\s*"((?:\\.|[^"\\])*)"/g, ':<span class="hl-str">$1</span>')
+    .replace(
+      /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+      ':<span class="hl-num">$1</span>',
+    )
+    .replace(/:\s*(true|false|null)\b/g, ':<span class="hl-bool">$1</span>');
 }
 
 function formatOutputValue(v: unknown): string {
   const parsed = deepParse(v);
   let content: string;
   if (parsed === null) content = `<span class="hl-bool">null</span>`;
-  else if (typeof parsed === "boolean") content = `<span class="hl-bool">${parsed}</span>`;
-  else if (typeof parsed === "number") content = `<span class="hl-num">${parsed}</span>`;
-  else if (typeof parsed === "string") content = `<span class="hl-str">${escHtml(parsed)}</span>`;
+  else if (typeof parsed === "boolean")
+    content = `<span class="hl-bool">${parsed}</span>`;
+  else if (typeof parsed === "number")
+    content = `<span class="hl-num">${parsed}</span>`;
+  else if (typeof parsed === "string")
+    content = `<span class="hl-str">${escHtml(parsed)}</span>`;
   else content = `<pre class="json-pretty">${highlightJson(parsed)}</pre>`;
   const raw = JSON.stringify(parsed, null, 2);
-  const icon = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
+  const icon =
+    '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>';
   return `<div class="output-value-wrap">${content}<button class="copy-btn" data-copy="${escHtml(raw)}" title="Copy">${icon}</button></div>`;
 }
 
@@ -296,18 +306,27 @@ function showStatusIndicator(phase: string) {
 }
 
 function escHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) =>
-    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c] ?? c,
+  return s.replace(
+    /[&<>"']/g,
+    (c) =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
+        c
+      ] ?? c,
   );
 }
 
 document.addEventListener("click", (e) => {
-  const btn = (e.target as HTMLElement).closest("[data-copy]") as HTMLElement | null;
+  const btn = (e.target as HTMLElement).closest(
+    "[data-copy]",
+  ) as HTMLElement | null;
   if (!btn) return;
   navigator.clipboard.writeText(btn.dataset.copy ?? "").then(() => {
-    const check = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
+    const check =
+      '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="#22c55e" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>';
     const orig = btn.innerHTML;
     btn.innerHTML = check;
-    setTimeout(() => { btn.innerHTML = orig; }, 1200);
+    setTimeout(() => {
+      btn.innerHTML = orig;
+    }, 1200);
   });
 });
