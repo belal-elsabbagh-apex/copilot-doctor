@@ -94,9 +94,10 @@ function renderJobs() {
         <span class="job-order-id">${saved.selectedOrderId || "(no order)"}</span>
       </div>
       <div class="job-card-body">
-        <span>${firstMatch?.job.Key || firstMatch?.job.Id || "—"}${firstMatch?.jobUrl ? `<a href="${firstMatch.jobUrl}" target="_blank" class="job-link" title="Open in UiPath"> ↗</a>` : ""}</span>
+        <span>${firstMatch?.job.Key || firstMatch?.job.Id || "—"}</span>
         <span>${new Date(saved.scannedAt).toLocaleString()}</span>
         <span>${saved.hostname}</span>
+        ${firstMatch?.jobUrl ? `<a href="${firstMatch.jobUrl}" target="_blank" class="job-link">Go to job ↗</a>` : ""}
       </div>
       ${extraCount > 0 ? `<div class="job-card-extra">+${extraCount} more match${extraCount > 1 ? "es" : ""}</div>` : ""}
     `;

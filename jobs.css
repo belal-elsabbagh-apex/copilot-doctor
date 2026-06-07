@@ -93,6 +93,21 @@ h1 {
   font-size: 11px;
   color: #64748b;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.job-card-body .job-link {
+  margin-left: auto;
+  color: #3b82f6;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.job-card-body .job-link:hover {
+  color: #60a5fa;
+  text-decoration: underline;
 }
 
 .job-card-body span {
@@ -112,15 +127,6 @@ h1 {
   font-family: monospace;
   font-size: 11px;
   color: #94a3b8;
-}
-
-.job-link {
-  color: #3b82f6;
-  text-decoration: none;
-}
-
-.job-link:hover {
-  color: #60a5fa;
 }
 
 .job-expanded {

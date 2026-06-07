@@ -170,12 +170,10 @@ function renderMatchDetail(match: JobMatch, container: HTMLElement) {
 
   const stateEl = document.createElement("div");
   stateEl.className = "job-item";
-  const jobLink = match.jobUrl
-    ? ` <a href="${match.jobUrl}" target="_blank" class="job-link" title="Open in UiPath">↗</a>`
-    : "";
   stateEl.innerHTML = `
     <span class="job-state" style="background:${getStateColor(matchedJob.State)}">${matchedJob.State}</span>
-    <span>Job · ${matchedJob.Key || matchedJob.Id}${jobLink}</span>
+    <span>Job · ${matchedJob.Key || matchedJob.Id}</span>
+    ${match.jobUrl ? `<a href="${match.jobUrl}" target="_blank" class="job-link">Go to job ↗</a>` : ""}
   `;
   section.appendChild(stateEl);
 
