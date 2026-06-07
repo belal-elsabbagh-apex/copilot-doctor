@@ -206,11 +206,28 @@ function sortOutputEntries(entries: [string, unknown][]): [string, unknown][] {
   });
 }
 
+function highlightJson(obj: unknown): string {
+  const json = JSON.stringify(obj, null, 2);
+  return json.replace(
+    /("(?:\\.|[^"\\])*")\s*:/g,
+    '<span class="hl-key">$1</span>:',
+  ).replace(
+    /:\s*("(?:\\.|[^"\\])*")/g,
+    ':<span class="hl-str">$1</span>',
+  ).replace(
+    /:\s*(-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+    ':<span class="hl-num">$1</span>',
+  ).replace(
+    /:\s*(true|false|null)\b/g,
+    ':<span class="hl-bool">$1</span>',
+  );
+}
+
 function formatOutputValue(v: unknown): string {
   if (typeof v !== "string") return String(v);
   try {
     const parsed = JSON.parse(v);
-    return `<pre class="json-pretty">${JSON.stringify(parsed, null, 2)}</pre>`;
+    return `<pre class="json-pretty">${highlightJson(parsed)}</pre>`;
   } catch {
     return v;
   }
