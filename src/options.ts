@@ -1,4 +1,4 @@
-export {};
+import type { SiteConfigs } from "./api";
 
 let editingHost: string | null = null;
 let allConfigs: SiteConfigs = {};
@@ -35,8 +35,7 @@ document.getElementById("test")?.addEventListener("click", testConnection);
 
 function loadConfigs() {
   chrome.storage.local.get("siteConfigs", (data) => {
-    const d = data as StorageResult;
-    allConfigs = d.siteConfigs ?? {};
+    allConfigs = (data as { siteConfigs?: SiteConfigs }).siteConfigs ?? {};
     renderList();
   });
 }

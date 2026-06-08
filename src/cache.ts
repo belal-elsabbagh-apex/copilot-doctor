@@ -1,20 +1,23 @@
-window.ScanCache = {
-  set(result: ScanResult, hostname: string): Promise<void> {
-    return chrome.storage.local.set({
-      latestScanResult: { ...result, cachedHost: hostname },
-    });
-  },
+import type { JobMatch } from "./api";
 
-  get(): Promise<(ScanResult & { cachedHost: string }) | null> {
-    return chrome.storage.local.get("latestScanResult").then((data) => {
-      const cached = (
-        data as { latestScanResult?: ScanResult & { cachedHost: string } }
-      ).latestScanResult;
-      return cached?.cachedHost ? cached : null;
-    });
-  },
+export interface OrderScanData {
+  matches: JobMatch[];
+  jobCount: number;
+  scanError: string;
+}
 
-  clear(): Promise<void> {
-    return chrome.storage.local.remove("latestScanResult");
-  },
-};
+export interface ScanResult {
+  selectedOrderId: string;
+  orders: Record<string, OrderScanData>;
+  scanError: string;
+}
+
+export interface SavedJob {
+  id: string;
+  scannedAt: number;
+  hostname: string;
+  selectedOrderId: string;
+  matches: JobMatch[];
+  jobCount: number;
+  scanError: string;
+}

@@ -1,36 +1,78 @@
-const hostname = location.hostname;
+import type { OrderScanData, ScanResult, SavedJob } from "./cache";
+import { getJobByOrderId } from "./jobMatcher";
+import {
+  getCardDate,
+  getSelectedOrderId,
+  getVisibleOrderIds,
+} from "./orderParser";
+import { getConfig } from "./config";
 
-let currentConfig: SiteConfig | undefined;
+const hostname = location.hostname;
 
 const VALID_HOSTS = new Set([
   "copilot.apexmedical.ai",
   "pre-prod-copilot.apexmedicalai.com",
 ]);
 
-function cacheOrderIds() {
-  const cards = document.querySelectorAll<HTMLElement>(".order-card");
-  const ids: string[] = [];
-  for (let i = 0; i < cards.length && ids.length < 10; i++) {
-    if (cards[i].id) ids.push(cards[i].id);
+// Per-order, page-life cache. Results for every visible order are retained so
+// re-selecting an order you've passed over is instant (stale-while-revalidate).
+type CacheEntry = { data: OrderScanData; scannedAt: number };
+const orderCache = new Map<string, CacheEntry>();
+const MAX_CACHE_ENTRIES = 50;
+const REVALIDATE_AFTER_MS = 15_000;
+let scanToken = 0;
+
+function setCacheEntry(orderId: string, data: OrderScanData) {
+  orderCache.delete(orderId); // re-insert to keep Map order = LRU recency
+  orderCache.set(orderId, { data, scannedAt: Date.now() });
+  while (orderCache.size > MAX_CACHE_ENTRIES) {
+    const oldest = orderCache.keys().next().value;
+    if (oldest === undefined) break;
+    orderCache.delete(oldest);
   }
-  chrome.storage.local.set({ cachedOrderIds: { [hostname]: ids } });
+}
+
+function snapshotOrders(orderIds: string[]): Record<string, OrderScanData> {
+  const orders: Record<string, OrderScanData> = {};
+  for (const id of orderIds) {
+    const entry = orderCache.get(id);
+    if (entry) orders[id] = entry.data;
+  }
+  return orders;
+}
+
+function getCachedSnapshot(): ScanResult {
+  return {
+    selectedOrderId: getSelectedOrderId(),
+    orders: snapshotOrders(getVisibleOrderIds()),
+    scanError: "",
+  };
 }
 
 function setupAutoScan() {
-  let lastId: string | null = null;
+  let lastSelectedId = "";
+  let cachedIds = "";
   const observer = new MutationObserver(() => {
-    cacheOrderIds();
-    const selected = document.querySelector(
-      ".order-card:has(.patient-card-selected)",
-    );
-    const id = selected?.id || null;
-    if (id && id !== lastId) {
-      ScanCache.clear();
-      lastId = id;
+    const currentIds = getVisibleOrderIds().join(",");
+    const selectedId = getSelectedOrderId();
+    if (selectedId && selectedId !== lastSelectedId) {
+      lastSelectedId = selectedId;
       clearTimeout(scanTimer);
       scanTimer = setTimeout(() => {
-        console.debug("[Copilot Doctor] auto-scan triggered for:", id);
-        scanPage().catch((err) =>
+        console.debug("[Copilot Doctor] auto-scan triggered for:", selectedId);
+        scanAllOrders().catch((err) =>
+          console.error("[Copilot Doctor] auto-scan failed:", err),
+        );
+      }, 400);
+    } else if (currentIds !== cachedIds) {
+      cachedIds = currentIds;
+      clearTimeout(scanTimer);
+      scanTimer = setTimeout(() => {
+        console.debug(
+          "[Copilot Doctor] auto-scan triggered (visible orders changed):",
+          currentIds,
+        );
+        scanAllOrders().catch((err) =>
           console.error("[Copilot Doctor] auto-scan failed:", err),
         );
       }, 400);
@@ -41,212 +83,85 @@ function setupAutoScan() {
     subtree: true,
     attributeFilter: ["class"],
   });
-  if (document.querySelector(".order-card:has(.patient-card-selected)")) {
-    scanPage().catch((err) =>
+  if (getSelectedOrderId()) {
+    scanAllOrders().catch((err) =>
       console.error("[Copilot Doctor] initial scan failed:", err),
     );
   }
 }
 
-async function scanPage(orderId?: string) {
-  console.debug("[Copilot Doctor] scanPage() started");
+async function scanAllOrders(): Promise<ScanResult> {
+  console.debug("[Copilot Doctor] scanAllOrders() started");
+  const myToken = ++scanToken;
 
-  chrome.runtime.sendMessage({ type: "SCAN_STATUS", phase: "scanning" });
+  const selectedOrderId = getSelectedOrderId();
+  const orderIds = getVisibleOrderIds();
 
-  const config = currentConfig;
-  console.debug("[Copilot Doctor] config found:", !!config);
-
-  if (!config) {
-    const err = `No config found for "${hostname}". Open Settings and add one.`;
-    console.error("[Copilot Doctor]", err);
-    chrome.runtime.sendMessage({ type: "SCAN_RESULTS", scanError: err });
-    return { scanError: err };
+  if (orderIds.length === 0) {
+    const empty: ScanResult = {
+      selectedOrderId: "",
+      orders: {},
+      scanError: "No visible order cards found on this page.",
+    };
+    chrome.runtime.sendMessage({ type: "SCAN_RESULTS", ...empty });
+    return empty;
   }
 
-  const selectedCard = getSelectedCard();
-  const selectedOrderId = orderId || selectedCard?.id || null;
-  console.debug("[Copilot Doctor] selectedOrderId:", selectedOrderId);
-
-  const cardDate = getSelectedCardDate(selectedCard);
-
-  let jobs: UiPathJob[] = [];
-  let fetchError: string | null = null;
-  try {
-    chrome.runtime.sendMessage({ type: "SCAN_STATUS", phase: "fetching" });
-    jobs = await fetchJobsSince(config, cardDate, selectedOrderId);
-    console.debug("[Copilot Doctor] jobs fetched:", jobs.length);
-  } catch (err) {
-    fetchError = String(err);
-    console.error("[Copilot Doctor] fetchJobsSince threw:", err);
-  }
-
-  const matches: JobMatch[] = [];
-  if (selectedOrderId && !fetchError && jobs.length > 0) {
-    console.debug("[Copilot Doctor] searching for matching jobs...");
-    for (let i = 0; i < jobs.length; i += 10) {
-      const batch = jobs.slice(i, i + 10);
-      const results = await Promise.allSettled(
-        batch.map((job) => fetchJobDetailsById(job.Id).catch(() => null)),
-      );
-      for (const result of results) {
-        const fullJob = result.status === "fulfilled" ? result.value : null;
-        if (!fullJob?.OutputArguments) continue;
-        try {
-          const output = JSON.parse(fullJob.OutputArguments);
-          if (output.out_OrderUid === selectedOrderId) {
-            console.debug(
-              "[Copilot Doctor] match found:",
-              fullJob.Key || fullJob.Id,
-            );
-            const videoUrl = await fetchJobVideoUrl(fullJob.Key || "");
-            const jobUrl = fetchJobUrl(fullJob.Key || fullJob.Id || "");
-            matches.push({ job: fullJob, output, videoUrl, jobUrl });
-          }
-        } catch (parseErr) {
-          console.debug(
-            "[Copilot Doctor] unparseable OutputArguments on job",
-            fullJob.Key || fullJob.Id,
-            parseErr,
-          );
-        }
-      }
-    }
-  }
-  console.debug("[Copilot Doctor] matches found:", matches.length);
-
-  const result: ScanResult = {
+  // 1. Emit the cached (stale) snapshot immediately for an instant paint.
+  const stale: ScanResult = {
     selectedOrderId,
-    matches,
-    jobCount: jobs.length,
-    scanError: fetchError,
+    orders: snapshotOrders(orderIds),
+    scanError: "",
   };
-  chrome.runtime.sendMessage({ type: "SCAN_RESULTS", ...result });
-  ScanCache.set(result, hostname);
-  persistScanResult(hostname, result);
-  console.debug("[Copilot Doctor] SCAN_RESULTS sent");
-  return result;
-}
-
-function getSelectedCard(): Element | null {
-  return (
-    document.querySelector(".order-card:has(.patient-card-selected)") || null
-  );
-}
-
-function getSelectedCardDate(card: Element | null): Date {
-  if (!card) return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  const el = card.querySelector(".date p");
-  const text = (el?.textContent || "").trim();
-  const parts = text.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (parts) {
-    const d = new Date(+parts[3], +parts[1] - 1, +parts[2]);
-    if (!Number.isNaN(d.getTime())) {
-      d.setHours(0, 0, 0, 0);
-      console.debug("[Copilot Doctor] card date:", d.toISOString());
-      return d;
-    }
+  if (Object.keys(stale.orders).length > 0) {
+    chrome.runtime.sendMessage({ type: "SCAN_RESULTS", ...stale });
   }
-  console.debug(
-    "[Copilot Doctor] no parseable date on card, defaulting to 30 days ago",
-  );
-  return new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-}
 
-async function fetchJobsSince(
-  _config: SiteConfig,
-  since: Date,
-  orderUid: string | null,
-): Promise<UiPathJob[]> {
-  const sinceStr = since.toISOString();
-  let filter = `CreationTime gt ${sinceStr}`;
-  if (orderUid) {
-    filter += ` and contains(OutputArguments, '${orderUid}')`;
-  }
-  console.debug(
-    "[Copilot Doctor] fetching jobs since:",
-    sinceStr,
-    "filter:",
-    filter,
-  );
-  const data = await sendUiPathRequest("/odata/Jobs", {
-    $filter: filter,
-    $orderby: "CreationTime desc",
-    $top: orderUid ? "10" : "200",
-    $select: "Id,Key,State,CreationTime",
+  // 2. Revalidate visible orders that are uncached or past the freshness window.
+  const now = Date.now();
+  const toFetch = orderIds.filter((id) => {
+    const entry = orderCache.get(id);
+    return !entry || now - entry.scannedAt >= REVALIDATE_AFTER_MS;
   });
-  console.debug(
-    "[Copilot Doctor] API response keys:",
-    data ? Object.keys(data as object) : "null",
-  );
-  if (data && typeof data === "object" && "value" in data) {
-    const jobs = (data as { value: UiPathJob[] }).value || [];
-    console.debug("[Copilot Doctor] jobs returned:", jobs.length);
-    return jobs;
-  }
-  console.warn(
-    "[Copilot Doctor] API response missing 'value' key. Full response:",
-    JSON.stringify(data).slice(0, 500),
-  );
-  return [];
-}
 
-async function fetchJobDetailsById(
-  jobId: string | undefined,
-): Promise<UiPathJob | null> {
-  if (!jobId) return null;
-  try {
-    const data = await sendUiPathRequest(`/odata/Jobs(${jobId})`, {
-      $select: "Id,Key,State,CreationTime,OutputArguments,InputArguments",
-    });
-    return data as UiPathJob;
-  } catch (err) {
-    console.debug(
-      "[Copilot Doctor] fetchJobDetailsById failed for",
-      jobId,
-      err,
-    );
-    return null;
+  if (toFetch.length === 0) {
+    persistScanResult(hostname, stale);
+    return stale;
   }
-}
 
-async function fetchJobVideoUrl(jobKey: string): Promise<string | null> {
-  if (!jobKey) return null;
-  try {
-    const data = await sendUiPathRequest(
-      `/api/VideoRecording/jobs/${jobKey}/read`,
-      undefined,
+  chrome.runtime.sendMessage({ type: "SCAN_STATUS", phase: "fetching" });
+
+  const config = await getConfig(hostname);
+  for (const orderId of toFetch) {
+    if (myToken !== scanToken) return stale; // superseded by a newer scan
+    const data = await getJobByOrderId(
+      hostname,
+      orderId,
+      getCardDate(orderId),
+      config,
     );
-    if (Array.isArray(data)) {
-      for (const entry of data) {
-        if (
-          entry?.uri &&
-          typeof entry.uri === "string" &&
-          entry.uri.includes("recording.webm")
-        ) {
-          console.debug("[Copilot Doctor] video URL found");
-          return entry.uri;
-        }
-      }
-    }
-    return null;
-  } catch (err) {
-    console.debug("[Copilot Doctor] no video for job", jobKey, err);
-    return null;
+    setCacheEntry(orderId, data);
   }
-}
-function fetchJobUrl(jobKey: string): string {
-  return `https://cloud.uipath.com/${currentConfig!.org}/${currentConfig!.tenant}/orchestrator_/jobs(sidepanel:sidepanel/jobs/${jobKey}/details)`;
+  if (myToken !== scanToken) return stale;
+
+  // 3. Emit the fresh, reconciled snapshot.
+  const fresh: ScanResult = {
+    selectedOrderId,
+    orders: snapshotOrders(orderIds),
+    scanError: "",
+  };
+  chrome.runtime.sendMessage({ type: "SCAN_RESULTS", ...fresh });
+  persistScanResult(hostname, fresh);
+  console.debug("[Copilot Doctor] SCAN_RESULTS sent (fresh)");
+  return fresh;
 }
 
 function persistScanResult(
   host: string,
-  scan: {
-    selectedOrderId: string | null;
-    matches: JobMatch[];
-    jobCount: number;
-    scanError: string | null;
-  },
+  scan: ScanResult,
 ) {
+  const selectedData = scan.orders[scan.selectedOrderId];
+  if (!selectedData) return;
   chrome.storage.local.get("savedJobs", (data) => {
     const raw = data as { savedJobs?: SavedJob[] };
     const saved: SavedJob[] = raw?.savedJobs ?? [];
@@ -255,32 +170,11 @@ function persistScanResult(
       scannedAt: Date.now(),
       hostname: host,
       selectedOrderId: scan.selectedOrderId,
-      matches: scan.matches,
-      jobCount: scan.jobCount,
-      scanError: scan.scanError,
+      matches: selectedData.matches,
+      jobCount: selectedData.jobCount,
+      scanError: selectedData.scanError,
     });
     chrome.storage.local.set({ savedJobs: saved });
-  });
-}
-
-function sendUiPathRequest(
-  endpoint: string,
-  params: Record<string, string> | undefined,
-): Promise<unknown> {
-  return new Promise((resolve, reject) => {
-    chrome.runtime.sendMessage(
-      { type: "UIPATH_REQUEST", hostname, endpoint, params },
-      (response) => {
-        const resp = response as { error?: string; data?: unknown } | undefined;
-        if (resp?.error) {
-          reject(new Error(resp.error));
-        } else if (resp?.data !== undefined) {
-          resolve(resp.data);
-        } else {
-          resolve(resp);
-        }
-      },
-    );
   });
 }
 
@@ -291,11 +185,14 @@ function setupContentMessageListener() {
       _sender: chrome.runtime.MessageSender,
       sendResponse: (response?: unknown) => void,
     ) => {
-      const msg = message as { type: string; orderId?: string };
+      const msg = message as { type: string };
       console.debug("[Copilot Doctor] message received:", msg);
       if (msg?.type === "SCAN_ORDERS") {
-        scanPage(msg.orderId).then(sendResponse);
-        return true;
+        sendResponse(getCachedSnapshot()); // instant cached paint
+        scanAllOrders().catch((err) =>
+          console.error("[Copilot Doctor] scan failed:", err),
+        );
+        return undefined;
       }
       return undefined;
     },
@@ -309,16 +206,10 @@ if (!VALID_HOSTS.has(hostname)) {
   console.error(`[Copilot Doctor] unsupported host "${hostname}" — skipping`);
 }
 
-let scanTimer: ReturnType<typeof setTimeout> | undefined;
+let scanTimer = 0;
 
-async function init() {
-  const raw = await chrome.storage.local.get("siteConfigs");
-  currentConfig =
-    raw && typeof raw === "object" && "siteConfigs" in raw
-      ? (raw as StorageResult).siteConfigs?.[hostname]
-      : undefined;
+function init() {
   setupContentMessageListener();
   setupAutoScan();
-  cacheOrderIds();
 }
-init().catch((err) => console.error("[Copilot Doctor] init failed:", err));
+init();

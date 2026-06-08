@@ -1,4 +1,5 @@
-export {};
+import type { UiPathRequestBody } from "./api";
+import { getConfig } from "./config";
 
 function setupBgOnInstalledListener() {
   chrome.runtime.onInstalled.addListener((details) => {
@@ -34,13 +35,9 @@ async function handleUiPathRequest(
     const { hostname, endpoint, params } = msg;
     console.debug("[Bg] UiPath request:", { hostname, endpoint, params });
 
-    const raw = await chrome.storage.local.get("siteConfigs");
-    const config =
-      raw && typeof raw === "object" && "siteConfigs" in raw
-        ? (raw as StorageResult).siteConfigs?.[hostname]
-        : undefined;
+    const config = await getConfig(hostname);
 
-    if (!config?.org || !config?.tenant || !config?.folder || !config?.token) {
+    if (!config.org || !config.tenant || !config.folder || !config.token) {
       const err = `No config found for "${hostname}". Open options to add one.`;
       console.error("[Bg] Config missing:", {
         hostname,

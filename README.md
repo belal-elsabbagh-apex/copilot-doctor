@@ -10,13 +10,13 @@ Chrome extension that matches orders on Copilot pages to their corresponding UiP
 
 **Option A — GitHub Releases (recommended)**
 1. Go to the [Releases page](https://github.com/belal-elsabbagh-apex/copilot-doctor/releases)
-2. Download the latest `copilot-doctor.zip`
+2. Download the latest `copilot-doctor-v*.zip`
 3. Unzip it to a folder
 4. Go to `chrome://extensions`, enable **Developer mode**
 5. Click **Load unpacked** and select the extracted folder
 
 **Option B — Build from source**
-1. Run `npm run build` (or `npm run pack` for a `.zip`)
+1. Run `bun run build` (or `bun run pack` for a `.zip`)
 2. Go to `chrome://extensions`, enable **Developer mode**
 3. Click **Load unpacked** and select the `dist/` folder
 
@@ -59,9 +59,9 @@ src/
 ```
 
 ```bash
-npm run watch     # Auto-compile on save
-npm run build     # Compile + copy assets to dist/
-npm run pack      # Build + create copilot-doctor.zip
+bun run watch     # Auto-compile on save
+bun run build     # Compile + copy assets to dist/
+bun run pack      # Build + create copilot-doctor-v<version>.zip
 ```
 
 Load `dist/` as an unpacked extension. Changes apply after refreshing on `chrome://extensions`.

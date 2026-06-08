@@ -1,14 +1,18 @@
 {
   "name": "copilot-doctor",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc && cp popup.html options.html jobs.html popup.css options.css jobs.css manifest.json dist/ && cp -r icons/ dist/",
-    "watch": "tsc --watch",
-    "pack": "npm run build && node scripts/pack.mjs"
+    "build": "bun build src/content.ts src/popup.ts src/jobs.ts src/options.ts src/background.ts --outdir=dist --format=iife --minify && cp popup.html options.html jobs.html popup.css options.css jobs.css manifest.json dist/ && cp -r icons/ dist/",
+    "watch": "bun build src/content.ts src/popup.ts src/jobs.ts src/options.ts src/background.ts --outdir=dist --format=iife --watch",
+    "pack": "npm run build && node scripts/pack.mjs",
+    "lint": "biome lint src/",
+    "lint:fix": "biome lint --write src/",
+    "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
+    "@biomejs/biome": "^2.4.16",
     "@types/chrome": "^0.0.287",
     "archiver": "^8.0.0",
     "typescript": "^6.0.3"

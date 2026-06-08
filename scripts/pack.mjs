@@ -9,7 +9,6 @@ const { ZipArchive } = require("archiver");
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const dist = join(root, "dist");
-const outPath = join(root, "copilot-doctor.zip");
 
 const manifestPath = join(dist, "manifest.json");
 if (!existsSync(manifestPath)) {
@@ -19,6 +18,7 @@ if (!existsSync(manifestPath)) {
 
 const manifest = JSON.parse(readFileSync(manifestPath, "utf-8"));
 const version = manifest.version || "0.0.0";
+const outPath = join(root, `copilot-doctor-v${version}.zip`);
 
 const output = createWriteStream(outPath);
 const archive = new ZipArchive();
