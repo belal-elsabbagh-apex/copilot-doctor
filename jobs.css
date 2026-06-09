@@ -282,17 +282,195 @@ h1 {
   border-color: #22c55e;
 }
 
-#clear-btn {
+#search-btn {
   padding: 6px 14px;
   font-size: 12px;
   border: none;
   border-radius: 5px;
   cursor: pointer;
-  background: #dc2626;
-  color: #fff;
+  background: #22c55e;
+  color: #052e16;
   font-weight: 600;
 }
 
-#clear-btn:hover {
-  background: #ef4444;
+#search-btn:hover {
+  background: #16a34a;
+}
+
+#search-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.result-count {
+  color: #64748b;
+  font-size: 12px;
+  margin-bottom: 4px;
+}
+
+.job-card-header .chevron {
+  margin-left: auto;
+  color: #64748b;
+  font-size: 12px;
+  transition: transform 0.15s;
+}
+
+.job-card.expanded .chevron {
+  transform: rotate(90deg);
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #94a3b8;
+  padding: 24px 0;
+  font-size: 13px;
+}
+
+.spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid #334155;
+  border-top-color: #22c55e;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error-box {
+  background: #450a0a;
+  color: #fca5a5;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 12px;
+}
+
+.job-logs {
+  margin-top: 12px;
+}
+
+.logs-toggle {
+  background: #334155;
+  color: #e2e8f0;
+  border: 1px solid #475569;
+  border-radius: 5px;
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.logs-toggle:hover {
+  background: #475569;
+}
+
+.logs-list {
+  margin-top: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  background: #0f172a;
+  border: 1px solid #334155;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 11px;
+}
+
+.log-row {
+  display: flex;
+  gap: 8px;
+  padding: 4px 8px;
+  border-bottom: 1px solid #1e293b;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-time {
+  color: #64748b;
+  flex-shrink: 0;
+}
+
+.log-level {
+  font-weight: 700;
+  flex-shrink: 0;
+  text-transform: uppercase;
+  color: #94a3b8;
+}
+
+.log-msg {
+  color: #cbd5e1;
+  flex: 1;
+}
+
+.log-error .log-level,
+.log-fatal .log-level {
+  color: #ef4444;
+}
+
+.log-warn .log-level {
+  color: #fbbf24;
+}
+
+.log-info .log-level {
+  color: #4ade80;
+}
+
+.log-trace .log-level,
+.log-verbose .log-level {
+  color: #64748b;
+}
+
+.output-comments {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.output-comment {
+  padding: 7px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid transparent;
+  border-left-width: 3px;
+}
+
+.comment-error {
+  background: #450a0a;
+  color: #fca5a5;
+  border-color: #7f1d1d;
+}
+
+.comment-warning {
+  background: #422006;
+  color: #fcd34d;
+  border-color: #854d0e;
+}
+
+.comment-info {
+  background: #0c2a4a;
+  color: #93c5fd;
+  border-color: #1e3a5f;
+}
+
+.log-failure-term {
+  background: rgba(239, 68, 68, 0.18);
+  color: #fca5a5;
+  font-weight: 700;
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.log-row.log-flagged {
+  background: rgba(239, 68, 68, 0.08);
+  box-shadow: inset 2px 0 0 #ef4444;
 }

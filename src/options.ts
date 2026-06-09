@@ -1,4 +1,4 @@
-import type { SiteConfigs } from "./api";
+import type { SiteConfigs } from "./config";
 
 let editingHost: string | null = null;
 let allConfigs: SiteConfigs = {};

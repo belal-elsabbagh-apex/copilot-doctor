@@ -1,6 +1,7 @@
 import type { OrderScanData, ScanResult } from "./cache";
 import { formatTimeSince, getStateColor, renderJobDetails } from "./render";
-import type { JobMatch, SiteConfig } from "./api";
+import type { JobMatch } from "./api";
+import type { SiteConfig } from "./config";
 
 const configStatus = document.getElementById("config-status");
 const content = document.getElementById("content");
@@ -226,7 +227,7 @@ function renderMatchDetail(match: JobMatch, container: HTMLElement) {
   `;
   section.appendChild(stateEl);
 
-  renderJobDetails(section, match);
+  renderJobDetails(section, match, currentHost ?? "");
   container.appendChild(section);
 }
 

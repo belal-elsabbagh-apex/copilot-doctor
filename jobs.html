@@ -3,26 +3,21 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Copilot Doctor — Saved Jobs</title>
+  <title>Copilot Doctor — Search Jobs</title>
   <link rel="stylesheet" href="jobs.css" />
 </head>
 <body>
   <div id="app">
-    <h1>Saved Jobs</h1>
-    <p class="subtitle">Previously scanned order-to-job matches.</p>
+    <h1>Search Jobs</h1>
+    <p class="subtitle">Find a UiPath job by order ID.</p>
 
     <div id="filters">
-      <input type="text" id="search" placeholder="Search by order ID or job key..." />
-      <select id="state-filter">
-        <option value="">All states</option>
-        <option value="Successful">Successful</option>
-        <option value="Faulted">Faulted</option>
-        <option value="Stopped">Stopped</option>
-      </select>
-      <button id="clear-btn">Clear All</button>
+      <select id="site"></select>
+      <input type="text" id="search" placeholder="Order ID…" />
+      <button id="search-btn">Search</button>
     </div>
 
-    <div id="list"><p class="empty">No saved jobs yet. Scan a page first.</p></div>
+    <div id="list"><p class="empty">Enter an order ID and search.</p></div>
   </div>
   <script src="jobs.js"></script>
 </body>

@@ -1,158 +1,156 @@
+import { escHtml, getStateColor, renderJobDetails } from "./render";
 import {
-  getStateColor,
-  renderJobDetails,
-} from "./render";
-import type { UiPathJob } from "./api";
-import type { SavedJob } from "./cache";
+  confirmJobsForOrder,
+  fetchJobMatch,
+  fetchJobUrl,
+  searchJobsByOrderId,
+  type JobMatch,
+  type UiPathJob,
+} from "./api";
+import type { SiteConfig, SiteConfigs } from "./config";
 
-let savedJobs: SavedJob[] = [];
+let configs: SiteConfigs = {};
 
-const listEl = document.getElementById("list");
+const siteEl = document.getElementById("site") as HTMLSelectElement | null;
 const searchEl = document.getElementById("search") as HTMLInputElement | null;
-const stateEl = document.getElementById(
-  "state-filter",
-) as HTMLSelectElement | null;
+const searchBtn = document.getElementById("search-btn") as HTMLButtonElement | null;
+const listEl = document.getElementById("list");
 
-document.getElementById("clear-btn")?.addEventListener("click", () => {
-  if (confirm("Delete all saved job records?")) {
-    chrome.storage.local.set({ savedJobs: [] }, loadJobs);
-  }
+document.addEventListener("DOMContentLoaded", loadSites);
+searchBtn?.addEventListener("click", runSearch);
+searchEl?.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") runSearch();
 });
 
-searchEl?.addEventListener("input", renderJobs);
-stateEl?.addEventListener("change", renderJobs);
-
-document.addEventListener("DOMContentLoaded", loadJobs);
-
-function loadJobs() {
-  chrome.storage.local.get("savedJobs", (data) => {
-    const raw = data as { savedJobs?: SavedJob[] };
-    savedJobs = (raw.savedJobs ?? []).map(normalizeSavedJob);
-    renderJobs();
+function loadSites() {
+  chrome.storage.local.get("siteConfigs", (data) => {
+    configs = (data as { siteConfigs?: SiteConfigs }).siteConfigs ?? {};
+    const hosts = Object.keys(configs);
+    if (siteEl) {
+      siteEl.innerHTML = hosts.length
+        ? hosts.map((h) => `<option value="${escHtml(h)}">${escHtml(h)}</option>`).join("")
+        : `<option value="">No sites configured</option>`;
+    }
+    if (hosts.length === 0 && listEl) {
+      listEl.innerHTML = `<p class="empty">No sites configured. Add one in the extension options.</p>`;
+    }
   });
 }
 
-function normalizeSavedJob(j: SavedJob): SavedJob {
-  if (!j.matches && "matchedJob" in j) {
-    const old = j as SavedJob & {
-      matchedJob?: UiPathJob;
-      matchedOutput?: Record<string, unknown>;
-      videoUrl?: string;
-    };
-    j.matches = [];
-    if (old.matchedJob) {
-      j.matches.push({
-        job: old.matchedJob,
-        output: old.matchedOutput ?? {},
-        videoUrl: old.videoUrl ?? "",
-        jobUrl: "",
-      });
-    }
-  }
-  return j;
-}
-
-function renderJobs() {
+async function runSearch() {
   if (!listEl) return;
 
-  const search = (searchEl?.value || "").toLowerCase();
-  const stateFilter = stateEl?.value || "";
+  const orderId = (searchEl?.value || "").trim();
+  const host = siteEl?.value || "";
+  const config = configs[host];
 
-  let filtered = savedJobs;
-  if (search) {
-    filtered = filtered.filter(
-      (j) =>
-        j.selectedOrderId.toLowerCase().includes(search) ||
-        j.matches.some(
-          (m) =>
-            m.job.Key?.toLowerCase().includes(search) ||
-            m.job.Id?.toLowerCase().includes(search),
-        ),
-    );
+  if (!orderId) {
+    listEl.innerHTML = `<p class="empty">Enter an order ID to search.</p>`;
+    return;
   }
-  if (stateFilter) {
-    filtered = filtered.filter((j) =>
-      j.matches.some((m) => m.job.State === stateFilter),
-    );
-  }
-
-  if (filtered.length === 0) {
-    listEl.innerHTML = `<p class="empty">${
-      savedJobs.length === 0
-        ? "No saved jobs yet. Scan a page first."
-        : "No matches for the current filters."
-    }</p>`;
+  if (!host || !config) {
+    listEl.innerHTML = `<p class="empty">No configured site selected. Add one in the extension options.</p>`;
     return;
   }
 
-  listEl.innerHTML = "";
-  for (const saved of filtered) {
-    const card = document.createElement("div");
-    card.className = "job-card";
+  if (searchBtn) searchBtn.disabled = true;
+  listEl.innerHTML = `<p class="status"><span class="spinner"></span> Searching…</p>`;
 
-    const firstMatch = saved.matches[0];
-    const stateColor = firstMatch
-      ? getStateColor(firstMatch.job.State)
-      : "#757575";
-    const extraCount = saved.matches.length - 1;
-
-    card.innerHTML = `
-      <div class="job-card-header">
-        <span class="job-state" style="background:${stateColor}">${firstMatch?.job.State || "—"}</span>
-        <span class="job-order-id">${saved.selectedOrderId || "(no order)"}</span>
-      </div>
-      <div class="job-card-body">
-        <span>${firstMatch?.job.Key || firstMatch?.job.Id || "—"}</span>
-        <span>${new Date(saved.scannedAt).toLocaleString()}</span>
-        <span>${saved.hostname}</span>
-        ${firstMatch.jobUrl ? `<a href="${firstMatch.jobUrl}" target="_blank" class="job-link">Go to job ↗</a>` : ""}
-      </div>
-      ${extraCount > 0 ? `<div class="job-card-extra">+${extraCount} more match${extraCount > 1 ? "es" : ""}</div>` : ""}
-    `;
-
-    let expanded = false;
-    let detailIndex = 0;
-    card.addEventListener("click", () => {
-      expanded = !expanded;
-      const existing = card.querySelector(".job-expanded");
-      if (existing) {
-        existing.remove();
-        return;
-      }
-      if (saved.matches.length === 0) return;
-
-      const details = document.createElement("div");
-      details.className = "job-expanded";
-
-      if (saved.matches.length > 1) {
-        const nav = document.createElement("div");
-        nav.className = "match-nav";
-        for (const [i, m] of saved.matches.entries()) {
-          const dot = document.createElement("span");
-          dot.className = `match-dot${i === detailIndex ? " active" : ""}`;
-          dot.style.background = getStateColor(m.job.State);
-          dot.addEventListener("click", (e) => {
-            e.stopPropagation();
-            detailIndex = i;
-            renderJobDetails(details, m);
-            const dots = nav.querySelectorAll(".match-dot");
-            for (let j = 0; j < dots.length; j++) {
-              dots[j].className = `match-dot${j === i ? " active" : ""}`;
-            }
-          });
-          nav.appendChild(dot);
-        }
-        details.appendChild(nav);
-      }
-
-      renderJobDetails(details, saved.matches[detailIndex]);
-      card.appendChild(details);
-    });
-
-    listEl.appendChild(card);
+  try {
+    const candidates = await searchJobsByOrderId(host, orderId);
+    const jobs = await confirmJobsForOrder(host, candidates, orderId);
+    if (jobs.length === 0) {
+      listEl.innerHTML = `<p class="empty">No job found whose order is “${escHtml(orderId)}”.</p>`;
+      return;
+    }
+    renderResults(host, config, jobs);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    listEl.innerHTML = `<div class="error-box">Error: ${escHtml(msg)}</div>`;
+  } finally {
+    if (searchBtn) searchBtn.disabled = false;
   }
 }
 
+function renderResults(host: string, config: SiteConfig, jobs: UiPathJob[]) {
+  if (!listEl) return;
+  listEl.innerHTML = "";
+  const count = document.createElement("p");
+  count.className = "result-count";
+  count.textContent = `${jobs.length} matching job${jobs.length === 1 ? "" : "s"}`;
+  listEl.appendChild(count);
+  for (const job of jobs) {
+    listEl.appendChild(buildCard(host, config, job));
+  }
+}
+
+// A collapsible card. The header/body summary toggles it; the heavy details
+// (OutputArguments + video) are fetched lazily on first expand and cached.
+function buildCard(host: string, config: SiteConfig, job: UiPathJob): HTMLElement {
+  const card = document.createElement("div");
+  card.className = "job-card";
+
+  const created = job.CreationTime
+    ? new Date(job.CreationTime).toLocaleString()
+    : "";
+  const jobUrl =
+    job.Key || job.Id ? fetchJobUrl(config, job.Key || job.Id || "") : "";
+  card.innerHTML = `
+    <div class="job-card-header">
+      <span class="job-state" style="background:${getStateColor(job.State)}">${escHtml(job.State)}</span>
+      <span class="job-order-id">${escHtml(job.Key || job.Id || "—")}</span>
+      <span class="chevron">▸</span>
+    </div>
+    <div class="job-card-body">
+      ${created ? `<span>${escHtml(created)}</span>` : ""}
+      ${jobUrl ? `<a href="${escHtml(jobUrl)}" target="_blank" class="job-link">Go to job ↗</a>` : ""}
+    </div>
+  `;
+
+  let match: JobMatch | null = null;
+  let loading = false;
+
+  card.addEventListener("click", async (e) => {
+    const target = e.target as HTMLElement;
+    // Don't toggle when interacting with the link or inside the expanded body.
+    if (target.closest(".job-expanded") || target.closest(".job-link")) return;
+
+    const existing = card.querySelector(".job-expanded");
+    if (existing) {
+      existing.remove();
+      card.classList.remove("expanded");
+      return;
+    }
+    if (loading) return;
+
+    card.classList.add("expanded");
+    const details = document.createElement("div");
+    details.className = "job-expanded";
+    card.appendChild(details);
+
+    if (match) {
+      renderJobDetails(details, match, host);
+      return;
+    }
+
+    loading = true;
+    details.innerHTML = `<p class="status"><span class="spinner"></span> Loading details…</p>`;
+    try {
+      match = await fetchJobMatch(host, config, job);
+      details.innerHTML = "";
+      renderJobDetails(details, match, host);
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      details.innerHTML = `<div class="error-box">Error: ${escHtml(msg)}</div>`;
+    } finally {
+      loading = false;
+    }
+  });
+
+  return card;
+}
+
+// Copy-to-clipboard for the output-value copy buttons rendered by renderJobDetails.
 document.addEventListener("click", async (e) => {
   const btn = (e.target as HTMLElement).closest(
     "[data-copy]",

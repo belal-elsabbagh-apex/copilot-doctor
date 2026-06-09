@@ -1,4 +1,11 @@
-import type { SiteConfig, SiteConfigs } from "./api";
+export interface SiteConfig {
+  org: string;
+  tenant: string;
+  folder: string;
+  token: string;
+}
+
+export type SiteConfigs = Record<string, SiteConfig>;
 
 export const EMPTY_CONFIG: SiteConfig = {
   org: "",

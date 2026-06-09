@@ -206,7 +206,7 @@ if (!VALID_HOSTS.has(hostname)) {
   console.error(`[Copilot Doctor] unsupported host "${hostname}" — skipping`);
 }
 
-let scanTimer = 0;
+let scanTimer: ReturnType<typeof setTimeout> | undefined;
 
 function init() {
   setupContentMessageListener();

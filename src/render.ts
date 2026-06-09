@@ -1,24 +1,10 @@
-import type { JobMatch } from "./api";
-
-export function sortOutputEntries(
-  entries: [string, unknown][],
-): [string, unknown][] {
-  const order = [
-    "out_OrderUid",
-    "out_Result",
-    "out_Account",
-    "out_QueueItemReference",
-    "out_AuthId",
-  ];
-  return [...entries].sort((a, b) => {
-    const ia = order.indexOf(a[0]);
-    const ib = order.indexOf(b[0]);
-    if (ia !== -1 && ib !== -1) return ia - ib;
-    if (ia !== -1) return -1;
-    if (ib !== -1) return 1;
-    return a[0].localeCompare(b[0]);
-  });
-}
+import { fetchJobLogs, type JobLog, type JobMatch } from "./api";
+import {
+  analyzeOutput,
+  highlightFailureTerms,
+  isFailureLog,
+  type OutputComment,
+} from "./outputAnalysis";
 
 export function deepParse(v: unknown): unknown {
   if (typeof v === "string") {
@@ -100,11 +86,36 @@ export function formatOutputValue(v: unknown): string {
   return `<div class="output-value-wrap">${content}<button class="copy-btn" data-copy="${escHtml(raw)}" title="Copy">${icon}</button></div>`;
 }
 
-export function renderJobDetails(container: HTMLElement, match: JobMatch): void {
+export function renderJobDetails(
+  container: HTMLElement,
+  match: JobMatch,
+  hostname: string,
+): void {
   const existingDetail = container.querySelector(".output-fields");
   if (existingDetail) existingDetail.remove();
   const existingVideo = container.querySelector("video");
   if (existingVideo) existingVideo.remove();
+  const existingLogs = container.querySelector(".job-logs");
+  if (existingLogs) existingLogs.remove();
+  const existingComments = container.querySelector(".output-comments");
+  if (existingComments) existingComments.remove();
+
+  // Logs feed both the analysis (log-based rules) and the logs panel below, so
+  // fetch them once here and share the promise.
+  const jobKey = match.job.Key || "";
+  const logsPromise: Promise<JobLog[]> = jobKey
+    ? fetchJobLogs(hostname, jobKey)
+    : Promise.resolve([]);
+
+  // Comments depend on both output and logs, so analyze once when the logs
+  // resolve. The box reserves its slot above the JSON in the meantime.
+  const commentsBox = document.createElement("div");
+  commentsBox.className = "output-comments";
+  commentsBox.hidden = true;
+  container.appendChild(commentsBox);
+  logsPromise.then((logs) => {
+    renderComments(commentsBox, analyzeOutput(match.output, logs));
+  });
 
   if (match.videoUrl) {
     const video = document.createElement("video");
@@ -118,13 +129,81 @@ export function renderJobDetails(container: HTMLElement, match: JobMatch): void 
   if (Object.keys(match.output).length > 0) {
     const outputFields = document.createElement("div");
     outputFields.className = "output-fields";
-    outputFields.innerHTML = sortOutputEntries(Object.entries(match.output))
-      .filter(([k]) => k.startsWith("out_"))
-      .map(
-        ([k, v]) =>
-          `<div class="output-row"><span class="output-key">${k}</span><div class="output-value">${formatOutputValue(v)}</div></div>`,
-      )
-      .join("");
+    // Render the entire OutputArguments object as one pretty JSON block
+    // (deep-parsed so nested JSON-string fields are expanded).
+    outputFields.innerHTML = formatOutputValue(match.output);
     container.appendChild(outputFields);
   }
+
+  if (jobKey) renderLogsSection(container, logsPromise);
+}
+
+// Renders (or re-renders) the analysis comments into `box`, hiding it when there
+// are none so it takes no vertical space.
+function renderComments(box: HTMLElement, comments: OutputComment[]): void {
+  box.innerHTML = comments
+    .map(
+      (c) =>
+        `<div class="output-comment comment-${c.severity}">${escHtml(c.message)}</div>`,
+    )
+    .join("");
+  box.hidden = comments.length === 0;
+}
+
+// Collapsible robot logs for a job. The data comes from the shared `logsPromise`
+// (already in flight from renderJobDetails); the panel renders on first expand.
+function renderLogsSection(
+  container: HTMLElement,
+  logsPromise: Promise<JobLog[]>,
+): void {
+  const wrap = document.createElement("div");
+  wrap.className = "job-logs";
+
+  const toggle = document.createElement("button");
+  toggle.className = "logs-toggle";
+  toggle.textContent = "View logs";
+
+  const list = document.createElement("div");
+  list.className = "logs-list";
+  list.hidden = true;
+
+  let rendered = false;
+
+  toggle.addEventListener("click", async () => {
+    if (!list.hidden) {
+      list.hidden = true;
+      toggle.textContent = "View logs";
+      return;
+    }
+    list.hidden = false;
+    toggle.textContent = "Hide logs";
+    if (rendered) return;
+
+    list.innerHTML = `<p class="status"><span class="spinner"></span> Loading logs…</p>`;
+    const logs = await logsPromise;
+    rendered = true;
+
+    list.innerHTML = logs.length
+      ? logs
+          .map((l) => {
+            const time = formatLogTime(l.TimeStamp);
+            const level = l.Level || "";
+            const msg = highlightFailureTerms(l.Message || "", escHtml);
+            const flagged = isFailureLog(l) ? " log-flagged" : "";
+            return `<div class="log-row log-${escHtml(level.toLowerCase())}${flagged}"><span class="log-time">${escHtml(time)}</span><span class="log-level">${escHtml(level)}</span><span class="log-msg">${msg}</span></div>`;
+          })
+          .join("")
+      : `<p class="info-text">No logs for this job.</p>`;
+  });
+
+  wrap.appendChild(toggle);
+  wrap.appendChild(list);
+  container.appendChild(wrap);
+}
+
+// Compact local time for a log timestamp; "" for missing/unparseable input.
+function formatLogTime(iso: string | undefined): string {
+  if (!iso) return "";
+  const t = new Date(iso);
+  return Number.isNaN(t.getTime()) ? "" : t.toLocaleTimeString();
 }
