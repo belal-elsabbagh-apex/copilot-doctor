@@ -46,26 +46,53 @@ Each config ties a **hostname** (e.g. `copilot.example.com`) to a UiPath environ
 3. If multiple jobs match, click between them in the popup to compare
 4. Click **Refresh** to re-scan
 
+For each matched job the popup shows:
+
+- **Analysis comments** — severity-tagged notes flagging likely problems (e.g. `out_Result` = "Failure", error/warning log entries, or failure language in otherwise-benign log messages)
+- **Output** — the full `OutputArguments` rendered as pretty, syntax-highlighted JSON (nested JSON strings expanded), with copy buttons
+- **Recording** — the job's video recording, when available
+- **Logs** — the robot execution logs (**View logs**); failure terms are highlighted and failing rows are flagged
+
+### Browse Jobs
+
+The **Browse Jobs** page lets you search any configured site for jobs by order ID directly (independent of the Copilot page), with the same job detail, analysis, and logs view.
+
 ## Development
 
 ```
 src/
-  background.ts   — Service worker; proxies UiPath API calls (avoids CORS)
-  content.ts      — Injected into Copilot pages; scans orders, queries jobs
-  popup.ts        — Popup UI
-  options.ts      — Settings page
-  jobs.ts         — Saved scan results browser
-  types.d.ts      — Shared type definitions
+  background.ts      — Service worker; proxies UiPath API calls (avoids CORS)
+  content.ts         — Injected into Copilot pages; scans orders, triggers matching
+  api.ts             — UiPath request helpers (jobs, logs, video, search/confirm)
+  jobMatcher.ts      — Resolves an order ID to its matching jobs
+  orderParser.ts     — Copilot-page DOM scraping (order IDs, dates, selection)
+  outputSchema.ts    — Normalizes the different OutputArguments shapes
+  outputAnalysis.ts  — Rule engine producing analysis comments over output + logs
+  render.ts          — Shared job-detail rendering (comments, JSON, video, logs)
+  config.ts          — Per-hostname config singleton (chrome.storage)
+  cache.ts           — Scan-result cache/storage shapes
+  popup.ts           — Popup UI
+  options.ts         — Settings page
+  jobs.ts            — Browse Jobs page (search + saved results)
 ```
 
 ```bash
 bun run watch     # Auto-compile on save
 bun run build     # Compile + copy assets to dist/
 bun run pack      # Build + create copilot-doctor-v<version>.zip
+bun run test      # Run the unit test suite
+bun run lint      # Biome lint
+bun run typecheck # tsc --noEmit (the build does not type-check)
 ```
 
 Load `dist/` as an unpacked extension. Changes apply after refreshing on `chrome://extensions`.
 
 ## How it works
 
-The content script watches for selected order cards and queries UiPath via the background worker. It fetches recent jobs, checks each job's `OutputArguments` for a matching `out_OrderUid`, and shows the results in the popup. Matched jobs are saved locally for later review in the **Browse Jobs** page.
+The content script watches for selected order cards and queries UiPath via the background worker (which proxies all `cloud.uipath.com` traffic to avoid CORS). For each visible order it searches recent jobs whose `OutputArguments` contain the order ID, then confirms each candidate by parsing its output — a job matches when its **normalized order UID** equals the order. Normalization (`outputSchema.ts`) handles multiple output shapes, so both flat `out_OrderUid` outputs and queue transaction items are matched uniformly.
+
+Matched jobs are rendered with semantic **analysis comments** (`outputAnalysis.ts`), the full output as JSON, the video recording, and on-demand robot logs. Results are saved locally for later review in the **Browse Jobs** page, which can also search any configured site by order ID directly.
+
+## Releases
+
+Bump `version` in **both** `package.json` and `manifest.json`, then push a `v*` tag. The release workflow runs `bun run pack` and attaches `copilot-doctor-v<version>.zip` to a generated GitHub Release.
