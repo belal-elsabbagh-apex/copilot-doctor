@@ -103,7 +103,7 @@ async function scanAllOrders(): Promise<ScanResult> {
       orders: {},
       scanError: "No visible order cards found on this page.",
     };
-    chrome.runtime.sendMessage({ type: "SCAN_RESULTS", ...empty });
+    chrome.runtime.sendMessage({ type: "SCAN_RESULTS", hostname, ...empty });
     return empty;
   }
 
@@ -114,7 +114,7 @@ async function scanAllOrders(): Promise<ScanResult> {
     scanError: "",
   };
   if (Object.keys(stale.orders).length > 0) {
-    chrome.runtime.sendMessage({ type: "SCAN_RESULTS", ...stale });
+    chrome.runtime.sendMessage({ type: "SCAN_RESULTS", hostname, ...stale });
   }
 
   // 2. Revalidate visible orders that are uncached or past the freshness window.
@@ -129,7 +129,7 @@ async function scanAllOrders(): Promise<ScanResult> {
     return stale;
   }
 
-  chrome.runtime.sendMessage({ type: "SCAN_STATUS", phase: "fetching" });
+  chrome.runtime.sendMessage({ type: "SCAN_STATUS", hostname, phase: "fetching" });
 
   const config = await getConfig(hostname);
   for (const orderId of toFetch) {
@@ -150,7 +150,7 @@ async function scanAllOrders(): Promise<ScanResult> {
     orders: snapshotOrders(orderIds),
     scanError: "",
   };
-  chrome.runtime.sendMessage({ type: "SCAN_RESULTS", ...fresh });
+  chrome.runtime.sendMessage({ type: "SCAN_RESULTS", hostname, ...fresh });
   persistScanResult(hostname, fresh);
   console.debug("[Copilot Doctor] SCAN_RESULTS sent (fresh)");
   return fresh;

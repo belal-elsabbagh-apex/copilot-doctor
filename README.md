@@ -42,11 +42,12 @@ Each config ties a **hostname** (e.g. `copilot.example.com`) to a UiPath environ
 ## Usage
 
 1. Navigate to a Copilot page showing orders
-2. Click the extension icon — it auto-scans the selected order card for matching UiPath jobs
-3. If multiple jobs match, click between them in the popup to compare
-4. Click **Refresh** to re-scan
+2. Click the extension icon — a **side panel** opens and stays docked while you work, auto-scanning the selected order card for matching UiPath jobs. The panel follows the active tab as you switch tabs.
+3. The toolbar **badge** shows how many jobs matched the selected order, so you can see at a glance without opening the panel
+4. If multiple jobs match, click between them in the panel to compare
+5. Click **Refresh** to re-scan
 
-For each matched job the popup shows:
+For each matched job the panel shows:
 
 - **Analysis comments** — severity-tagged notes flagging likely problems (e.g. `out_Result` = "Failure", error/warning log entries, or failure language in otherwise-benign log messages)
 - **Output** — the full `OutputArguments` rendered as pretty, syntax-highlighted JSON (nested JSON strings expanded), with copy buttons
@@ -71,7 +72,8 @@ src/
   render.ts          — Shared job-detail rendering (comments, JSON, video, logs)
   config.ts          — Per-hostname config singleton (chrome.storage)
   cache.ts           — Scan-result cache/storage shapes
-  popup.ts           — Popup UI
+  popup.ts           — Side panel UI (opened from the toolbar icon)
+  badge.ts           — Toolbar badge state derived from a scan
   options.ts         — Settings page
   jobs.ts            — Browse Jobs page (search + saved results)
 ```

@@ -41,11 +41,14 @@ Chrome Manifest V3 extension. Orders shown on Copilot web pages are matched to U
 
 **`chrome.storage.local` keys:**
 - `siteConfigs` — per-hostname UiPath credentials (written by `options.ts`)
-- `latestScanResult` — cache of the most recent scan, tagged with `cachedHost`; `getCache()` returns it only on a hostname match (helpers in `cache.ts`)
 - `savedJobs` — append-only history of matched scans, browsed in `jobs.ts`. `jobs.ts` has a `normalizeSavedJob()` shim that upgrades an older `matchedJob`/`matchedOutput` record shape to the current `matches[]` array — preserve this when changing `SavedJob`.
-- `cachedOrderIds` — visible order IDs per hostname
 
-**Message types** (string `type` field on `chrome.runtime`/`tabs` messages): `UIPATH_REQUEST` (→ background), `SCAN_ORDERS` (popup → content, triggers a scan), `SCAN_RESULTS` / `SCAN_STATUS` (content → popup).
+**`chrome.storage.session` keys** (ephemeral, never on disk, cleared at browser-session end):
+- `scan:<tabId>` — the latest `ScanResult` for a tab. Written by `background.ts` when it receives a `SCAN_RESULTS` broadcast; read by the side panel (`getSessionScan` in `cache.ts`) to paint instantly when the active tab changes; removed on `tabs.onRemoved`. Only the background writes and only extension pages read it, so both are trusted contexts — no `setAccessLevel` needed.
+
+**Message types** (string `type` field on `chrome.runtime`/`tabs` messages): `UIPATH_REQUEST` (→ background), `SCAN_ORDERS` (panel → content, triggers a scan), `SCAN_RESULTS` / `SCAN_STATUS` (content → panel **and** background). `SCAN_RESULTS`/`SCAN_STATUS` carry a `hostname` field; the panel ignores any whose host ≠ the active tab's, so background Copilot tabs auto-scanning don't bleed into the view.
+
+**Side panel + badge.** The toolbar action opens a **side panel** (not a popup) — `background.ts` calls `chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true })`, and `manifest.json` sets `side_panel.default_path` to `popup.html` (the popup UI is reused as the panel; `popup.ts` follows the active tab via `tabs.onActivated`/`onUpdated`). The same background `SCAN_RESULTS` listener also drives a per-tab toolbar **badge** via `badge.ts` (`badgeForScan`): the number of matched jobs for the selected order (empty when none).
 
 ## Hosts
 

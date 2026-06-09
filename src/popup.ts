@@ -1,4 +1,5 @@
 import type { OrderScanData, ScanResult } from "./cache";
+import { getSessionScan } from "./cache";
 import { formatTimeSince, getStateColor, renderJobDetails } from "./render";
 import type { JobMatch } from "./api";
 import type { SiteConfig } from "./config";
@@ -8,6 +9,7 @@ const content = document.getElementById("content");
 const pageInfo = document.getElementById("page-info");
 
 let currentHost: string | null = null;
+let currentTabId: number | null = null;
 let viewedOrderId = "";
 let selectedMatchIndex = 0;
 let cachedOrders: Record<string, OrderScanData> = {};
@@ -20,14 +22,12 @@ document.getElementById("open-jobs")?.addEventListener("click", () => {
   chrome.tabs.create({ url: chrome.runtime.getURL("jobs.html") });
 });
 
-async function triggerScan() {
-  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
-  const tab = tabs[0];
-  if (!tab?.id) {
+function triggerScan() {
+  if (currentTabId === null) {
     if (pageInfo) pageInfo.textContent = "No active tab ID found.";
     return;
   }
-  chrome.tabs.sendMessage(tab.id, { type: "SCAN_ORDERS" }, (response) => {
+  chrome.tabs.sendMessage(currentTabId, { type: "SCAN_ORDERS" }, (response) => {
     if (chrome.runtime.lastError) {
       if (pageInfo)
         pageInfo.textContent =
@@ -64,12 +64,16 @@ if (titleEl) {
   titleEl.appendChild(ver);
 }
 
-document.addEventListener("DOMContentLoaded", async () => {
+// Resolves the active tab, paints its cached scan instantly, then re-scans.
+// Re-run whenever the side panel's active tab changes so it follows the page.
+async function loadActiveTab() {
   const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
   const tab = tabs[0];
+  currentTabId = tab?.id ?? null;
   currentHost = tab?.url ? new URL(tab.url).hostname : null;
+  resetView();
 
-  if (!currentHost) {
+  if (!currentHost || currentTabId === null) {
     if (configStatus) {
       configStatus.textContent = "No active tab";
       configStatus.className = "missing";
@@ -78,25 +82,56 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  updateConfigStatus(currentHost);
+
+  // Instant paint from the per-tab session cache; fresh data follows via the
+  // SCAN_ORDERS reply and SCAN_RESULTS broadcasts.
+  const cached = await getSessionScan(currentTabId);
+  if (cached) applyScanResult(cached);
+
+  triggerScan();
+}
+
+function updateConfigStatus(host: string) {
   chrome.storage.local.get("siteConfigs", (data) => {
-    if (!currentHost) return;
     const cfg = (data as { siteConfigs?: Record<string, SiteConfig> })
-      .siteConfigs?.[currentHost];
+      .siteConfigs?.[host];
     if (configStatus) {
       if (cfg) {
-        configStatus.textContent = `${currentHost} — Configured`;
+        configStatus.textContent = `${host} — Configured`;
         configStatus.className = "ok";
       } else {
-        configStatus.textContent = `${currentHost} — No config`;
+        configStatus.textContent = `${host} — No config`;
         configStatus.className = "missing";
       }
     }
   });
+}
 
-  // Instant cached paint + fresh data both arrive from the content script's
-  // reply to SCAN_ORDERS (see triggerScan); the cache lives there now.
-  triggerScan();
+// Clear rendered state so one tab's orders never bleed into another's.
+function resetView() {
+  viewedOrderId = "";
+  selectedMatchIndex = 0;
+  cachedOrders = {};
+  const results = content?.querySelector(".scan-results");
+  if (results) results.innerHTML = "";
+  if (pageInfo) pageInfo.textContent = "Select an order card to auto-scan.";
+}
+
+let tabSwitchTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleReload() {
+  clearTimeout(tabSwitchTimer);
+  tabSwitchTimer = setTimeout(() => loadActiveTab(), 150);
+}
+
+chrome.tabs.onActivated.addListener(scheduleReload);
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+  if (tabId === currentTabId && (changeInfo.status === "complete" || changeInfo.url)) {
+    scheduleReload();
+  }
 });
+
+document.addEventListener("DOMContentLoaded", loadActiveTab);
 
 function applyScanResult(result: ScanResult) {
   if (result.scanError) {
@@ -114,7 +149,10 @@ function applyScanResult(result: ScanResult) {
 }
 
 chrome.runtime.onMessage.addListener((message: unknown) => {
-  const msg = message as { type: string };
+  const msg = message as { type: string; hostname?: string };
+  // Ignore scan traffic from background Copilot tabs that aren't the one the
+  // panel is currently following.
+  if (msg?.hostname && msg.hostname !== currentHost) return;
   if (msg?.type === "SCAN_RESULTS") {
     applyScanResult(message as ScanResult);
   }

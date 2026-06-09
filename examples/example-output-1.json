@@ -1,0 +1,87 @@
+{
+  "transactionItem": {
+    "Id": 877437957,
+    "Progress": "",
+    "SpecificContent": {
+      "callbackContext": {
+        "physicianId": 82,
+        "orderUid": "2bb69aa1-37b2-4855-8b25-44f6924e3039"
+      },
+      "orderUid": "2bb69aa1-37b2-4855-8b25-44f6924e3039",
+      "Specialty": "Radiology",
+      "Facility": "RadNet",
+      "ReferredToNPI": 1962457812,
+      "ReferredToPhone": "(310) 445-2800",
+      "ReferredToAddress": "3900 SHERMAN DR, STE 100 RIVERSIDE, CA 92503",
+      "ReferredToFax": "(310) 601-1446",
+      "ReferredToProviderID": "",
+      "Diagnoses": [
+        "M54.16"
+      ],
+      "ServiceCode": [
+        72148
+      ],
+      "DescriptionOfService": [
+        "Lumbar spine MRI w/o contrast"
+      ],
+      "Units": [
+        1
+      ],
+      "Treatments": [],
+      "OfficeComments": "",
+      "IsApproved": true,
+      "IsUrgent": false,
+      "NoteBucketPath": "s3://apex-uipath-authorization/ossm/orders/2bb69aa1-37b2-4855-8b25-44f6924e3039/auth/fax/authFax.pdf",
+      "appointmentDate": "",
+      "DOS": "06/05/2026",
+      "retryCount": 0,
+      "Location": "OSSM TEM",
+      "placeOfService": "11 - Office",
+      "IsRetro": false,
+      "isSpeciality": false,
+      "ProviderFirstName": "OSSM",
+      "ProviderLastName": "",
+      "ProviderFullName": "OSSM",
+      "ProviderMail": "ossm@apexmedical.ai",
+      "ProviderPhone": "(951) 296-6676",
+      "ProviderFax": "(951) 296-6675",
+      "ProviderAddress": "40949 Winchester Road Temecula, CA 92591",
+      "ProviderCity": "",
+      "ProviderZipCode": "",
+      "ProviderID": "",
+      "ProviderNPI": 1750021606,
+      "IsSameAsRequestingProvider": false,
+      "MemberFirstName": "WALTER",
+      "MemberLastName": "PALACIOS CHAIMAIDAN",
+      "MemberFullName": "Palacios Chaimaidan, Walter",
+      "MemberDOB": "12/09/1953",
+      "MemberID": 40033523501,
+      "MemberPhone": "951 448-3062",
+      "MemberFax": "",
+      "token": "eyJhbGciOiJSUzI1NiJ9.eyJpZCI6ODIsInRpbWVzdGFtcCI6MTc4MTAxNDI5NjkwNCwiaWF0IjoxNzgwOTI3ODk2fQ.DMUcp9UDm8sxyfxLpBNcms9tf06gsb5XGgf-x8BlmWx444jwZ6cEYzWPWkF1-_rM8Ai39svmvIiBmbTMsyyYYxJH5dQKp-ZKRPkB5XChrKnIKjXYEKaYfbnhdPsLFVxUmJ-qc7-jgVLftDMZL4TmFLz329KOMM7L33T61anJlGVhbIgFANxEoZa-RF_1QT7ubvzm0LOlcfKvYJQJl7PHO77ndRSMttnAzxUAUg_G5bIcidE5boNbYS2FTXo-HI5RRKq-r7BIuEvPQL-NdcyLjWgJCeGa3bJR1e42eFidCIfvmHaznjd3ARl6-w0IdDU7ijRjbt2S6FpC-RMffzq1HA",
+      "serverURL": "https://prod-be-batch.ehrcopilotbe.com",
+      "queueUrl": "https://sqs.us-west-2.amazonaws.com/654654442990/prod-be-ai-queue",
+      "automationId": "21a5ab32-817c-4a4a-95a0-bff16605ca6b"
+    },
+    "Reference": 7837722571,
+    "QueueName": "OPTUM CARE NETWORK auth submit queue",
+    "RetryNo": 0,
+    "Status": 3,
+    "ExecutionExceptionId": null,
+    "LastProcessingOn": null,
+    "ItemKey": "484bd862-9d85-4e5f-887c-d1f9fc471fa4",
+    "QueueDefinitionId": 118705,
+    "AssignedTo": null,
+    "Priority": 2,
+    "RowVersion": "AAAAAKf4QbI=",
+    "ProcessingException": null,
+    "StartTransactionTime": "2026-06-08T07:37:27.7276118-07:00",
+    "ReviewStatus": "None",
+    "Output": null,
+    "DueDate": null,
+    "DeferDate": null,
+    "ParentOperationId": "",
+    "UniqueKey": "484bd862-9d85-4e5f-887c-d1f9fc471fa4",
+    "FolderPath": "Authorization"
+  }
+}

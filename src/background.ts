@@ -1,5 +1,13 @@
 import type { UiPathRequestBody } from "./api";
+import { badgeForScan } from "./badge";
+import { type ScanResult, clearSessionScan, setSessionScan } from "./cache";
 import { getConfig } from "./config";
+
+// Clicking the toolbar icon opens the side panel (instead of a popup). Guarded
+// for Chrome < 114 where chrome.sidePanel is unavailable.
+chrome.sidePanel
+  ?.setPanelBehavior({ openPanelOnActionClick: true })
+  .catch((err) => console.debug("[Bg] sidePanel unavailable:", err));
 
 function setupBgOnInstalledListener() {
   chrome.runtime.onInstalled.addListener((details) => {
@@ -14,17 +22,46 @@ function setupBgMessageListener() {
   chrome.runtime.onMessage.addListener(
     (
       message: unknown,
-      _sender: chrome.runtime.MessageSender,
+      sender: chrome.runtime.MessageSender,
       sendResponse: (response?: unknown) => void,
     ) => {
-      const msg = message as UiPathRequestBody & { hostname: string };
+      const msg = message as UiPathRequestBody & { type: string };
       if (msg?.type === "UIPATH_REQUEST") {
-        handleUiPathRequest(msg, sendResponse);
+        handleUiPathRequest(
+          msg as UiPathRequestBody & { hostname: string },
+          sendResponse,
+        );
         return true;
+      }
+      if (msg?.type === "SCAN_RESULTS" && sender.tab?.id !== undefined) {
+        handleScanResults(message as ScanResult, sender.tab.id);
       }
       return undefined;
     },
   );
+}
+
+// Content scripts broadcast SCAN_RESULTS; the worker caches them per-tab in
+// session storage (for the side panel to hydrate from) and reflects status on
+// the toolbar badge.
+function handleScanResults(result: ScanResult, tabId: number) {
+  setSessionScan(tabId, result);
+  const { text, color } = badgeForScan(result);
+  chrome.action.setBadgeText({ tabId, text });
+  if (text) chrome.action.setBadgeBackgroundColor({ tabId, color });
+}
+
+// Drop a tab's cached scan when it closes, and clear its badge when it navigates
+// away (a Copilot page re-sets it on the next scan).
+function setupBgTabListeners() {
+  chrome.tabs.onRemoved.addListener((tabId) => {
+    clearSessionScan(tabId);
+  });
+  chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
+    if (changeInfo.url) {
+      chrome.action.setBadgeText({ tabId, text: "" });
+    }
+  });
 }
 
 async function handleUiPathRequest(
@@ -95,3 +132,4 @@ async function handleUiPathRequest(
 
 setupBgOnInstalledListener();
 setupBgMessageListener();
+setupBgTabListeners();

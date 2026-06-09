@@ -1,0 +1,74 @@
+{
+  "out_PortalKey": "Molina",
+  "out_AutomationId": "c741d791-3e3b-4102-b95c-f94549949c9a",
+  "out_TransactionJson": {
+    "callbackContext": {
+      "physicianId": 12,
+      "orderUid": "35953a8d-42ab-486c-91e8-42f9d681b37f"
+    },
+    "orderUid": "35953a8d-42ab-486c-91e8-42f9d681b37f",
+    "Specialty": "Diagnostic Center/Hospitals",
+    "Facility": "UCSD La Jolla",
+    "ReferredToNPI": 1497014278,
+    "ReferredToPhone": "(858) 657-7000",
+    "ReferredToAddress": "200 Arbor Dr, San Diego, CA 92103",
+    "ReferredToFax": "(888) 539-8781",
+    "ReferredToProviderID": "",
+    "Diagnoses": [
+      "R07.89",
+      "R00.2",
+      "R06.02",
+      "R94.31",
+      "Z13.6"
+    ],
+    "ServiceCode": [
+      75574
+    ],
+    "DescriptionOfService": [
+      "CT ANGIO HRT W/3D IMAGE"
+    ],
+    "Units": [
+      1
+    ],
+    "Treatments": [],
+    "OfficeComments": "",
+    "IsApproved": true,
+    "IsUrgent": false,
+    "NoteBucketPath": "s3://apex-uipath-authorization/hassankafri/orders/35953a8d-42ab-486c-91e8-42f9d681b37f/auth/fax/authFax.pdf",
+    "appointmentDate": "",
+    "DOS": "06/04/2026",
+    "retryCount": 0,
+    "Location": "El Cajon Office",
+    "placeOfService": "22 - On Campus - Outpatient Hospital",
+    "IsRetro": false,
+    "isSpeciality": false,
+    "ProviderFirstName": "HASSAN",
+    "ProviderLastName": "KAFRI",
+    "ProviderFullName": "HASSAN KAFRI",
+    "ProviderMail": "evelia@kafri.com",
+    "ProviderPhone": "(619) 930-9404",
+    "ProviderFax": "(619) 930-9426",
+    "ProviderAddress": "328 HIGHLAND AVE STE 200 EL CAJON, CA 92020",
+    "ProviderCity": "",
+    "ProviderZipCode": 91910,
+    "ProviderID": "",
+    "ProviderNPI": 1760626477,
+    "IsSameAsRequestingProvider": false,
+    "MemberFirstName": "REEM",
+    "MemberLastName": "SABBAGHA",
+    "MemberFullName": "Sabbagha, Reem",
+    "MemberDOB": "02/22/1981",
+    "MemberID": "94017048E",
+    "MemberPhone": "619 209-9016",
+    "MemberFax": "",
+    "token": "eyJhbGciOiJSUzI1NiJ9.eyJpZCI6MTIsInRpbWVzdGFtcCI6MTc4MTAwODQ2NzI5NCwiaWF0IjoxNzgwOTIyMDY3fQ.QS2ryty4kKDYF42ZWPFjR-piWkoQN2Xj0fGcU8yqcPSsibWQFrJG9GitQ36c9PEAfRNWZqF55D1W3t9bobdpd0fKDxC30ZiWG31l3DSWH9HUcOiopfEFMwGW8kjXlh7X2hMWu0lwCTJ_AjdF38Z5k-rV6PqpJc5XXNl4EP34E81UCGBBW5K00nP8i9E_B2ZhXMPWY5ZyYg-iwoMSmTjm1TmQTGdoJFlaOdDs0fEPNG7BtPebYaicngVb0CAboSp5vWzql1HrIadFgGQ3dL-GaYQqELAHAzcbrPeNqLVpgDYHLP0D6ltbH_vs9TUhs5yil1bdcEQBeqGAYJJHUIYHDQ",
+    "serverURL": "https://prod-be-batch.ehrcopilotbe.com",
+    "queueUrl": "https://sqs.us-west-2.amazonaws.com/654654442990/prod-be-ai-queue",
+    "automationId": "c741d791-3e3b-4102-b95c-f94549949c9a"
+  },
+  "out_Result": "FAILURE",
+  "out_Account": "Availity Dr Kafri Credentials",
+  "out_AuthId": "",
+  "out_QueueItemReference": 7007427667,
+  "out_OrderUid": "35953a8d-42ab-486c-91e8-42f9d681b37f"
+}
