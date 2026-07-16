@@ -43,9 +43,33 @@
         <input type="text" id="folder" placeholder="e.g. Production" required />
       </label>
 
+      <h3>OAuth</h3>
+      <p class="hint">Either a PAT or a complete Client ID + Secret is required. When both are set, OAuth is tried first and falls back to the PAT if the token request fails.</p>
+
+      <label>
+        Client ID
+        <input type="text" id="oauth-client-id" placeholder="OAuth application Client ID" />
+      </label>
+
+      <label>
+        Client Secret
+        <input type="password" id="oauth-client-secret" placeholder="OAuth application Client Secret" />
+      </label>
+
+      <label>
+        Token URL
+        <input type="text" id="oauth-token-url" placeholder="Optional — derived from Org above" />
+        <span class="hint">Leave blank to use https://cloud.uipath.com/{org}/identity_/connect/token</span>
+      </label>
+
+      <label>
+        Scope
+        <input type="text" id="oauth-scope" placeholder="Optional" />
+      </label>
+
       <label>
         Personal Access Token
-        <input type="password" id="token" placeholder="Paste your PAT here" required />
+        <input type="password" id="token" placeholder="Paste your PAT here" />
       </label>
 
       <div id="status"></div>

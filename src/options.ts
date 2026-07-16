@@ -1,4 +1,4 @@
-import type { SiteConfigs } from "./config";
+import { hasValidAuth, type OAuthConfig, type SiteConfigs } from "./config";
 
 let editingHost: string | null = null;
 let allConfigs: SiteConfigs = {};
@@ -64,6 +64,29 @@ function renderList() {
   }
 }
 
+function readOAuthFromForm(): OAuthConfig | undefined {
+  const clientId =
+    (document.getElementById("oauth-client-id") as HTMLInputElement | null)
+      ?.value.trim() ?? "";
+  const clientSecret =
+    (
+      document.getElementById("oauth-client-secret") as HTMLInputElement | null
+    )?.value.trim() ?? "";
+  const tokenUrl =
+    (document.getElementById("oauth-token-url") as HTMLInputElement | null)
+      ?.value.trim() ?? "";
+  const scope =
+    (document.getElementById("oauth-scope") as HTMLInputElement | null)?.value.trim() ??
+    "";
+  if (!clientId || !clientSecret) return undefined;
+  return {
+    clientId,
+    clientSecret,
+    ...(tokenUrl ? { tokenUrl } : {}),
+    ...(scope ? { scope } : {}),
+  };
+}
+
 function editSite(host: string) {
   editingHost = host;
   if (editorTitle) editorTitle.textContent = `Edit: ${host}`;
@@ -75,16 +98,41 @@ function editSite(host: string) {
   const tenantEl = document.getElementById("tenant") as HTMLInputElement | null;
   const folderEl = document.getElementById("folder") as HTMLInputElement | null;
   const tokenEl = document.getElementById("token") as HTMLInputElement | null;
+  const clientIdEl = document.getElementById(
+    "oauth-client-id",
+  ) as HTMLInputElement | null;
+  const clientSecretEl = document.getElementById(
+    "oauth-client-secret",
+  ) as HTMLInputElement | null;
+  const tokenUrlEl = document.getElementById(
+    "oauth-token-url",
+  ) as HTMLInputElement | null;
+  const scopeEl = document.getElementById(
+    "oauth-scope",
+  ) as HTMLInputElement | null;
   if (hostnameEl) hostnameEl.value = host;
   if (orgEl) orgEl.value = cfg.org || "";
   if (tenantEl) tenantEl.value = cfg.tenant || "";
   if (folderEl) folderEl.value = cfg.folder || "";
   if (tokenEl) tokenEl.value = cfg.token || "";
+  if (clientIdEl) clientIdEl.value = cfg.oauth?.clientId || "";
+  if (clientSecretEl) clientSecretEl.value = cfg.oauth?.clientSecret || "";
+  if (tokenUrlEl) tokenUrlEl.value = cfg.oauth?.tokenUrl || "";
+  if (scopeEl) scopeEl.value = cfg.oauth?.scope || "";
   showEditor();
 }
 
 function clearEditor() {
-  for (const id of ["hostname", "org", "folder", "token"] as const) {
+  for (const id of [
+    "hostname",
+    "org",
+    "folder",
+    "token",
+    "oauth-client-id",
+    "oauth-client-secret",
+    "oauth-token-url",
+    "oauth-scope",
+  ] as const) {
     const el = document.getElementById(id) as HTMLInputElement | null;
     if (el) el.value = "";
   }
@@ -129,13 +177,18 @@ function saveCurrent() {
   const tenant = tenantEl?.value.trim() ?? "";
   const folder = folderEl?.value.trim() ?? "";
   const token = tokenEl?.value.trim() ?? "";
+  const oauth = readOAuthFromForm();
 
-  if (!org || !tenant || !folder || !token) {
-    showStatus("All fields are required", "error");
+  if (!org || !tenant || !folder) {
+    showStatus("Org, tenant, and folder are required", "error");
+    return;
+  }
+  if (!hasValidAuth({ org, tenant, folder, token, oauth })) {
+    showStatus("Provide a PAT or a complete OAuth Client ID + Secret", "error");
     return;
   }
 
-  allConfigs[host] = { org, tenant, folder, token };
+  allConfigs[host] = { org, tenant, folder, token, ...(oauth ? { oauth } : {}) };
 
   if (editingHost && editingHost !== host) {
     delete allConfigs[editingHost];
@@ -160,8 +213,13 @@ async function testConnection() {
   const folder = folderEl?.value.trim() ?? "";
   const token = tokenEl?.value.trim() ?? "";
   const hostname = hostnameEl?.value.trim() ?? "";
+  const oauth = readOAuthFromForm();
 
-  if (!hostname || !org || !tenant || !folder || !token) {
+  if (!hostname || !org || !tenant || !folder) {
+    showStatus("Fill in all fields first", "error");
+    return;
+  }
+  if (!hasValidAuth({ org, tenant, folder, token, oauth })) {
     showStatus("Fill in all fields first", "error");
     return;
   }

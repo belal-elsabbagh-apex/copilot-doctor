@@ -1,7 +1,8 @@
 import type { UiPathRequestBody } from "./api";
 import { badgeForScan } from "./badge";
 import { type ScanResult, clearSessionScan, setSessionScan } from "./cache";
-import { getConfig } from "./config";
+import { getConfig, hasValidAuth } from "./config";
+import { resolveAuthHeader } from "./uipathAuth";
 
 // Clicking the toolbar icon opens the side panel (instead of a popup). Guarded
 // for Chrome < 114 where chrome.sidePanel is unavailable.
@@ -74,7 +75,7 @@ async function handleUiPathRequest(
 
     const config = await getConfig(hostname);
 
-    if (!config.org || !config.tenant || !config.folder || !config.token) {
+    if (!config.org || !config.tenant || !config.folder || !hasValidAuth(config)) {
       const err = `No config found for "${hostname}". Open options to add one.`;
       console.error("[Bg] Config missing:", {
         hostname,
@@ -82,6 +83,7 @@ async function handleUiPathRequest(
         hasTenant: !!config?.tenant,
         hasFolder: !!config?.folder,
         hasToken: !!config?.token,
+        hasOAuth: !!(config?.oauth?.clientId && config?.oauth?.clientSecret),
       });
       sendResponse({ error: err });
       return;
@@ -100,12 +102,13 @@ async function handleUiPathRequest(
     }
     console.debug(
       "[Bg] Fetching:",
-      url.toString().replace(config.token, "***"),
+      config.token ? url.toString().replace(config.token, "***") : url.toString(),
     );
 
+    const authHeader = await resolveAuthHeader(hostname, config);
     const response = await fetch(url.toString(), {
       headers: {
-        Authorization: `Bearer ${config.token}`,
+        Authorization: authHeader,
         Accept: "application/json",
         "X-UIPATH-FolderPath": config.folder || "",
       },

@@ -302,6 +302,7 @@ h1 {
 
 #toolbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
   padding: 10px 14px;
   border-bottom: 1px solid #334155;
@@ -309,40 +310,42 @@ h1 {
 }
 
 #toolbar button {
-  flex: 1;
-  padding: 7px 0;
+  flex: 1 1 calc(50% - 3px);
+  padding: 7px 6px;
   font-size: 12px;
   font-weight: 600;
   border: none;
   border-radius: 5px;
   cursor: pointer;
+  white-space: nowrap;
+  color: #fff;
+  background: #475569;
   transition: background 0.15s;
 }
 
-#toolbar button:nth-child(1) {
-  background: #475569;
-  color: #e2e8f0;
-}
-
-#toolbar button:nth-child(1):hover {
+#toolbar button:hover {
   background: #64748b;
 }
 
-#toolbar button:nth-child(2) {
-  background: #1d4ed8;
-  color: #fff;
+#toolbar #open-options {
+  background: #475569;
+  color: #e2e8f0;
+}
+#toolbar #open-options:hover {
+  background: #64748b;
 }
 
-#toolbar button:nth-child(2):hover {
+#toolbar #open-jobs {
+  background: #1d4ed8;
+}
+#toolbar #open-jobs:hover {
   background: #2563eb;
 }
 
-#toolbar button:nth-child(3) {
+#toolbar #scan-page {
   background: #15803d;
-  color: #fff;
 }
-
-#toolbar button:nth-child(3):hover {
+#toolbar #scan-page:hover {
   background: #16a34a;
 }
 
