@@ -23,6 +23,20 @@ export interface JobMatch {
   jobUrl: string;
 }
 
+// A UiPath queue transaction. Queue-consumer jobs (e.g. SDP_AuthSubmit) don't
+// carry the order UID in their own input/output, so the order is only
+// correlatable through the queue item they processed: `SpecificContent.orderUid`
+// identifies the order and `ExecutorJobKey` points back at the job that ran it.
+export interface UiPathQueueItem {
+  Key?: string;
+  Status?: string;
+  ExecutorJobKey?: string | null;
+  ProcessingExceptionType?: string | null;
+  RetryNumber?: number;
+  CreationTime?: string;
+  SpecificContent?: Record<string, unknown>;
+}
+
 export function sendUiPathRequest(
   hostname: string,
   endpoint: string,
@@ -54,6 +68,27 @@ export async function fetchJobDetailsById(
     const data = await sendUiPathRequest(hostname, `/odata/Jobs(${jobId})`, {
       $select: "Id,Key,State,CreationTime,OutputArguments,InputArguments",
     });
+    return data as UiPathJob;
+  } catch {
+    return null;
+  }
+}
+
+// Single job by its GUID `Key` (queue items expose `ExecutorJobKey`, not the
+// numeric `Id` the Jobs collection is keyed by). Uses the GetByKey OData function
+// the Orchestrator UI itself calls. Returns the job incl. Output/InputArguments,
+// or null on any failure.
+export async function fetchJobDetailsByKey(
+  hostname: string,
+  jobKey: string,
+): Promise<UiPathJob | null> {
+  if (!jobKey) return null;
+  try {
+    const data = await sendUiPathRequest(
+      hostname,
+      `/odata/Jobs/UiPath.Server.Configuration.OData.GetByKey(identifier=${jobKey})`,
+      { $select: "Id,Key,State,CreationTime,OutputArguments,InputArguments" },
+    );
     return data as UiPathJob;
   } catch {
     return null;
@@ -150,6 +185,36 @@ export async function searchJobsByOrderId(
   return data && typeof data === "object" && "value" in data
     ? (data as { value: UiPathJob[] }).value || []
     : [];
+}
+
+// Queue items whose SpecificContent contains `orderId`, newest first (capped at
+// `top`). This is the second correlation path: a queue-consumer job never carries
+// the order UID in its own arguments (and a faulted job's OutputArguments are all
+// null), so a job like that is invisible to searchJobsByOrderId — but the queue
+// item it processed holds the order in SpecificContent and links back to the job
+// via ExecutorJobKey. The UID is matched server-side against the raw `SpecificData`
+// JSON string, because Orchestrator's OData doesn't support filtering nested
+// dynamic SpecificContent properties. The `contains` filter is a substring test,
+// so each hit is confirmed client-side against SpecificContent.orderUid.
+export async function searchQueueItemsByOrderId(
+  hostname: string,
+  orderId: string,
+  top = 50,
+): Promise<UiPathQueueItem[]> {
+  const needle = orderId.trim();
+  if (!needle) return [];
+  const escaped = needle.replace(/'/g, "''"); // OData single-quote escaping
+
+  const data = await sendUiPathRequest(hostname, "/odata/QueueItems", {
+    $filter: `contains(SpecificData, '${escaped}')`,
+    $orderby: "StartProcessing desc",
+    $top: String(top),
+  });
+  const items =
+    data && typeof data === "object" && "value" in data
+      ? (data as { value: UiPathQueueItem[] }).value || []
+      : [];
+  return items.filter((item) => item.SpecificContent?.orderUid === needle);
 }
 
 // Narrows `searchJobsByOrderId` candidates to the jobs whose output truly

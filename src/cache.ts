@@ -1,7 +1,18 @@
 import type { JobMatch } from "./api";
 
+// A queue transaction for the order that has no executor job yet (Status "New"
+// = waiting for a robot, or "InProgress" caught before its ExecutorJobKey is
+// stamped). There's no job to show — just the transaction's own status — so it
+// renders as a lightweight "queued" card, not a job card.
+export interface PendingTransaction {
+  status: string;
+  retryNumber: number;
+  creationTime?: string;
+}
+
 export interface OrderScanData {
   matches: JobMatch[];
+  pending: PendingTransaction[];
   jobCount: number;
   scanError: string;
 }

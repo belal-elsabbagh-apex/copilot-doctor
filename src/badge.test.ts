@@ -10,7 +10,9 @@ function match(output: Record<string, unknown>): JobMatch {
 function scan(orderId: string, matches: JobMatch[]): ScanResult {
   return {
     selectedOrderId: orderId,
-    orders: { [orderId]: { matches, jobCount: matches.length, scanError: "" } },
+    orders: {
+      [orderId]: { matches, pending: [], jobCount: matches.length, scanError: "" },
+    },
     scanError: "",
   };
 }

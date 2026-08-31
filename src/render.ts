@@ -49,8 +49,13 @@ export function escHtml(s: string): string {
 
 export function getStateColor(state: string): string {
   return (
-    { Successful: "#4CAF50", Faulted: "#F44336", Stopped: "#FF9800" }[state] ||
-    "#757575"
+    {
+      Successful: "#4CAF50",
+      Faulted: "#F44336",
+      Stopped: "#FF9800",
+      Running: "#2196F3",
+      InProgress: "#2196F3",
+    }[state] || "#757575"
   );
 }
 

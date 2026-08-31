@@ -1,6 +1,11 @@
 import type { OrderScanData, ScanResult } from "./cache";
 import { getSessionScan } from "./cache";
-import { formatTimeSince, getStateColor, renderJobDetails } from "./render";
+import {
+  escHtml,
+  formatTimeSince,
+  getStateColor,
+  renderJobDetails,
+} from "./render";
 import type { JobMatch } from "./api";
 import type { SiteConfig } from "./config";
 
@@ -244,7 +249,25 @@ function renderViewedOrder(container: HTMLElement) {
   if (matches.length > 0) {
     const idx = Math.min(selectedMatchIndex, matches.length - 1);
     renderMatchDetail(matches[idx], container);
-  } else {
+  }
+
+  const pending = data.pending ?? [];
+  if (pending.length > 0) {
+    const section = document.createElement("div");
+    section.className = "pending-section";
+    section.innerHTML =
+      `<p class="info-text">In queue — no job yet: ${pending.length}</p>` +
+      pending
+        .map((p) => {
+          const age = formatTimeSince(p.creationTime);
+          const retry = p.retryNumber > 0 ? ` · retry ${p.retryNumber}` : "";
+          return `<div class="job-item pending-item"><span class="job-state" style="background:${getStateColor(p.status)}">${escHtml(p.status)}</span><span>Queued transaction${age ? ` · ${age}` : ""}${retry}</span></div>`;
+        })
+        .join("");
+    container.appendChild(section);
+  }
+
+  if (matches.length === 0 && pending.length === 0) {
     container.innerHTML += `<p class="info-text">No UiPath job found matching this order ID.</p>`;
   }
 }
