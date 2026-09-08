@@ -1,3 +1,4 @@
+import { escHtml } from "./htmlEscape";
 import { hasValidAuth, type OAuthConfig, type SiteConfigs } from "./config";
 
 let editingHost: string | null = null;
@@ -56,8 +57,8 @@ function renderList() {
     const card = document.createElement("div");
     card.className = "site-card";
     card.innerHTML = `
-      <div class="site-host">${host}</div>
-      <div class="site-summary">${cfg.org} / ${cfg.tenant} / ${cfg.folder}</div>
+      <div class="site-host">${escHtml(host)}</div>
+      <div class="site-summary">${escHtml(cfg.org)} / ${escHtml(cfg.tenant)} / ${escHtml(cfg.folder)}</div>
     `;
     card.addEventListener("click", () => editSite(host));
     sitesContainer?.appendChild(card);
@@ -220,7 +221,7 @@ async function testConnection() {
     return;
   }
   if (!hasValidAuth({ org, tenant, folder, token, oauth })) {
-    showStatus("Fill in all fields first", "error");
+    showStatus("Provide a PAT or a complete OAuth Client ID + Secret", "error");
     return;
   }
 

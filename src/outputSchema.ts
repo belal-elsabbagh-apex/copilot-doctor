@@ -76,14 +76,25 @@ function specificContent(raw: Record<string, unknown>): Record<string, unknown> 
   return asRecord(asRecord(raw.transactionItem)?.SpecificContent);
 }
 
+// A copy of a queue transaction's SpecificContent minus the fields carrying an
+// auth JWT / internal routing data. Shared by the job-output field list and the
+// queue-item payload panel so both hide exactly the same keys.
+export function redactSpecificContent(
+  content: Record<string, unknown>,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(content)) {
+    if (!TX_HIDDEN_FIELDS.has(k)) out[k] = v;
+  }
+  return out;
+}
+
 const transactionItemAdapter: OutputAdapter = {
   id: "transactionItem",
   matches: (raw) => specificContent(raw) !== null,
   orderUid: (raw) => asString(specificContent(raw)?.orderUid),
   fields: (raw) =>
-    Object.entries(specificContent(raw) ?? {}).filter(
-      ([k]) => !TX_HIDDEN_FIELDS.has(k),
-    ),
+    Object.entries(redactSpecificContent(specificContent(raw) ?? {})),
 };
 
 // Registry, tried in order; first match wins.

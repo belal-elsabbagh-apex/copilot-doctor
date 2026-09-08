@@ -1,10 +1,17 @@
-import { fetchJobLogs, type JobLog, type JobMatch } from "./api";
+import {
+  fetchJobLogs,
+  type JobLog,
+  type JobMatch,
+  type UiPathJob,
+  type UiPathQueueItem,
+} from "./api";
 import {
   analyzeOutput,
   highlightFailureTerms,
   isFailureLog,
   type OutputComment,
 } from "./outputAnalysis";
+import { redactSpecificContent } from "./outputSchema";
 
 export function deepParse(v: unknown): unknown {
   if (typeof v === "string") {
@@ -37,24 +44,19 @@ export function highlightJson(obj: unknown): string {
     .replace(/:\s*(true|false|null)\b/g, ':<span class="hl-bool">$1</span>');
 }
 
-export function escHtml(s: string): string {
-  return s.replace(
-    /[&<>"']/g,
-    (c) =>
-      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[
-        c
-      ] ?? c,
-  );
-}
+export { escHtml } from "./htmlEscape";
+import { escHtml } from "./htmlEscape";
 
 export function getStateColor(state: string): string {
   return (
     {
-      Successful: "#4CAF50",
-      Faulted: "#F44336",
-      Stopped: "#FF9800",
-      Running: "#2196F3",
-      InProgress: "#2196F3",
+      Successful: "#2e7d32",
+      Faulted: "#c62828",
+      Failed: "#c62828",
+      Retried: "#bf360c",
+      Stopped: "#bf360c",
+      Running: "#1565c0",
+      InProgress: "#1565c0",
     }[state] || "#757575"
   );
 }
@@ -91,11 +93,106 @@ export function formatOutputValue(v: unknown): string {
   return `<div class="output-value-wrap">${content}<button class="copy-btn" data-copy="${escHtml(raw)}" title="Copy">${icon}</button></div>`;
 }
 
+// One-line summary of the queue transaction a job processed: status chip,
+// reference, retry count, age. Returns HTML for a `.job-item` row.
+export function queueItemSummary(item: UiPathQueueItem): string {
+  const status = item.Status ?? "Unknown";
+  const ref = item.Reference || (item.Id !== undefined ? `#${item.Id}` : "");
+  const age = formatTimeSince(item.CreationTime);
+  const retry =
+    (item.RetryNumber ?? 0) > 0 ? ` · retry ${item.RetryNumber}` : "";
+  return (
+    `<span class="job-state" style="background:${getStateColor(status)}">${escHtml(status)}</span>` +
+    `<span>Queue item${ref ? ` · ${escHtml(ref)}` : ""}${retry}</span>` +
+    (age
+      ? `<span class="age" title="${escHtml(item.CreationTime ?? "")}">${age}</span>`
+      : "")
+  );
+}
+
+// The transaction's failure text ("Type: Reason"), or "" when it has none.
+export function queueItemException(item: UiPathQueueItem): string {
+  const reason = item.ProcessingException?.Reason ?? "";
+  const type =
+    item.ProcessingException?.Type ?? item.ProcessingExceptionType ?? "";
+  if (!reason && !type) return "";
+  return reason && type ? `${type}: ${reason}` : reason || type;
+}
+
+// The queue transaction that produced this job. Status/reference/age and the
+// failure reason are always visible; the SpecificContent payload folds behind a
+// toggle so it doesn't bury the job's own output.
+function renderQueueItemSection(
+  container: HTMLElement,
+  item: UiPathQueueItem,
+): void {
+  const wrap = document.createElement("div");
+  wrap.className = "queue-item";
+
+  const header = document.createElement("div");
+  header.className = "job-item";
+  header.innerHTML = queueItemSummary(item);
+  wrap.appendChild(header);
+
+  const exception = queueItemException(item);
+  if (exception) {
+    const box = document.createElement("div");
+    box.className = "output-comment comment-error queue-exception";
+    box.textContent = exception;
+    wrap.appendChild(box);
+  }
+
+  const content = item.SpecificContent;
+  if (content && Object.keys(content).length > 0) {
+    const toggle = document.createElement("button");
+    toggle.className = "logs-toggle";
+    toggle.textContent = "View queue payload";
+    const fields = document.createElement("div");
+    fields.className = "output-fields queue-payload";
+    fields.hidden = true;
+    fields.innerHTML = formatOutputValue(redactSpecificContent(content));
+    toggle.addEventListener("click", () => {
+      fields.hidden = !fields.hidden;
+      toggle.textContent = fields.hidden
+        ? "View queue payload"
+        : "Hide queue payload";
+    });
+    wrap.appendChild(toggle);
+    wrap.appendChild(fields);
+  }
+
+  container.appendChild(wrap);
+}
+
+// Logs are fetched once per finished job and shared across re-renders (the
+// panel repaints as scan results stream in). A job that can still emit logs is
+// always re-fetched.
+const FINISHED_STATES: Record<string, true> = {
+  Successful: true,
+  Faulted: true,
+  Stopped: true,
+};
+const logsCache = new Map<string, Promise<JobLog[]>>();
+
+function jobLogs(hostname: string, job: UiPathJob): Promise<JobLog[]> {
+  const jobKey = job.Key || "";
+  if (!jobKey) return Promise.resolve([]);
+  if (!FINISHED_STATES[job.State]) return fetchJobLogs(hostname, jobKey);
+  const cacheKey = `${hostname}:${jobKey}`;
+  const cached = logsCache.get(cacheKey);
+  if (cached) return cached;
+  const promise = fetchJobLogs(hostname, jobKey);
+  logsCache.set(cacheKey, promise);
+  return promise;
+}
+
 export function renderJobDetails(
   container: HTMLElement,
   match: JobMatch,
   hostname: string,
 ): void {
+  const existingQueue = container.querySelector(".queue-item");
+  if (existingQueue) existingQueue.remove();
   const existingDetail = container.querySelector(".output-fields");
   if (existingDetail) existingDetail.remove();
   const existingVideo = container.querySelector("video");
@@ -108,9 +205,7 @@ export function renderJobDetails(
   // Logs feed both the analysis (log-based rules) and the logs panel below, so
   // fetch them once here and share the promise.
   const jobKey = match.job.Key || "";
-  const logsPromise: Promise<JobLog[]> = jobKey
-    ? fetchJobLogs(hostname, jobKey)
-    : Promise.resolve([]);
+  const logsPromise = jobLogs(hostname, match.job);
 
   // Comments depend on both output and logs, so analyze once when the logs
   // resolve. The box reserves its slot above the JSON in the meantime.
@@ -139,6 +234,8 @@ export function renderJobDetails(
     outputFields.innerHTML = formatOutputValue(match.output);
     container.appendChild(outputFields);
   }
+
+  if (match.queueItem) renderQueueItemSection(container, match.queueItem);
 
   if (jobKey) renderLogsSection(container, logsPromise);
 }

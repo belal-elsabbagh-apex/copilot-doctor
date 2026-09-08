@@ -29,7 +29,7 @@ h1 {
 }
 
 .subtitle {
-  color: #64748b;
+  color: #94a3b8;
   font-size: 12px;
   margin-bottom: 16px;
 }
@@ -80,6 +80,11 @@ h1 {
   border-color: #475569;
 }
 
+.job-card-header:focus-visible {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+}
+
 .job-card-header {
   display: flex;
   align-items: center;
@@ -91,14 +96,14 @@ h1 {
   display: flex;
   gap: 16px;
   font-size: 11px;
-  color: #64748b;
+  color: #94a3b8;
   flex-wrap: wrap;
   align-items: center;
 }
 
 .job-card-body .job-link {
   margin-left: auto;
-  color: #3b82f6;
+  color: #60a5fa;
   text-decoration: none;
   font-size: 11px;
   font-weight: 600;
@@ -106,7 +111,7 @@ h1 {
 }
 
 .job-card-body .job-link:hover {
-  color: #60a5fa;
+  color: #93c5fd;
   text-decoration: underline;
 }
 
@@ -303,7 +308,7 @@ h1 {
 }
 
 .result-count {
-  color: #64748b;
+  color: #94a3b8;
   font-size: 12px;
   margin-bottom: 4px;
 }

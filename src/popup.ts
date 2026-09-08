@@ -8,10 +8,12 @@ import {
 } from "./render";
 import type { JobMatch } from "./api";
 import type { SiteConfig } from "./config";
+import { scanProgressFraction, scanProgressLabel, type ScanProgress } from "./progress";
 
 const configStatus = document.getElementById("config-status");
 const content = document.getElementById("content");
 const pageInfo = document.getElementById("page-info");
+const progressEl = document.getElementById("scan-progress");
 
 let currentHost: string | null = null;
 let currentTabId: number | null = null;
@@ -118,6 +120,8 @@ function resetView() {
   viewedOrderId = "";
   selectedMatchIndex = 0;
   cachedOrders = {};
+  lastSignature = "";
+  if (progressEl) progressEl.hidden = true;
   const results = content?.querySelector(".scan-results");
   if (results) results.innerHTML = "";
   if (pageInfo) pageInfo.textContent = "Select an order card to auto-scan.";
@@ -138,8 +142,17 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
 
 document.addEventListener("DOMContentLoaded", loadActiveTab);
 
+let lastSignature = "";
+
+function orderSignature(data: OrderScanData | undefined): string {
+  if (!data) return "";
+  const keys = data.matches.map((m) => m.job.Key || m.job.Id || "").join(",");
+  return `${keys}|${data.pending.length}|${data.jobCount}|${data.scanError}`;
+}
+
 function applyScanResult(result: ScanResult) {
   if (result.scanError) {
+    lastSignature = ""; // force the next successful result to always repaint
     renderError(result.scanError);
     return;
   }
@@ -150,6 +163,9 @@ function applyScanResult(result: ScanResult) {
     selectedMatchIndex = 0;
   }
   cachedOrders = result.orders;
+  const signature = `${viewedOrderId}\u0000${orderSignature(result.orders[viewedOrderId])}`;
+  if (signature === lastSignature) return;
+  lastSignature = signature;
   renderAllOrders();
 }
 
@@ -162,7 +178,7 @@ chrome.runtime.onMessage.addListener((message: unknown) => {
     applyScanResult(message as ScanResult);
   }
   if (msg?.type === "SCAN_STATUS") {
-    showStatusIndicator((message as { phase: string }).phase);
+    showProgress(message as ScanProgress);
   }
 });
 
@@ -173,9 +189,6 @@ function renderError(error: string) {
 
 function renderAllOrders() {
   if (!content) return;
-
-  const existingStatus = content.querySelector(".scan-status");
-  if (existingStatus) existingStatus.remove();
 
   const existingError = content.querySelector(".error-box");
   if (existingError) existingError.remove();
@@ -188,14 +201,22 @@ function renderAllOrders() {
     resultsContainer.className = "scan-results";
     content.appendChild(resultsContainer);
   }
+  // Detach (don't destroy) the currently-rendered match section before the
+  // blanket wipe below, so a repaint triggered by an unrelated streamed
+  // sibling can reuse it intact instead of resetting an in-progress video.
+  const preservedSection = resultsContainer.querySelector(".job-section");
+  preservedSection?.remove();
   resultsContainer.innerHTML = "";
 
   if (pageInfo) pageInfo.textContent = "";
 
-  renderViewedOrder(resultsContainer);
+  renderViewedOrder(resultsContainer, preservedSection as HTMLElement | null);
 }
 
-function renderViewedOrder(container: HTMLElement) {
+function renderViewedOrder(
+  container: HTMLElement,
+  preservedSection: HTMLElement | null = null,
+) {
   if (!viewedOrderId) {
     const ids = Object.keys(cachedOrders);
     viewedOrderId = ids[0] || "";
@@ -233,7 +254,7 @@ function renderViewedOrder(container: HTMLElement) {
       const tab = document.createElement("button");
       tab.className = `match-tab${i === selectedMatchIndex ? " active" : ""}`;
       const age = formatTimeSince(m.job.CreationTime);
-      tab.innerHTML = `<span class="match-tab-dot" style="background:${getStateColor(m.job.State)}"></span> ${m.job.Key || m.job.Id || `#${i + 1}`}${age ? ` <span class="match-tab-time" title="${m.job.CreationTime}">${age}</span>` : ""}`;
+      tab.innerHTML = `<span class="match-tab-dot" style="background:${getStateColor(m.job.State)}"></span> ${m.job.Key || m.job.Id || `#${i + 1}`}${age ? ` <span class="age" title="${m.job.CreationTime}">${age}</span>` : ""}`;
       tab.addEventListener("click", () => {
         selectedMatchIndex = i;
         for (const t of tabs) t.classList.remove("active");
@@ -248,7 +269,7 @@ function renderViewedOrder(container: HTMLElement) {
 
   if (matches.length > 0) {
     const idx = Math.min(selectedMatchIndex, matches.length - 1);
-    renderMatchDetail(matches[idx], container);
+    renderMatchDetail(matches[idx], container, preservedSection);
   }
 
   const pending = data.pending ?? [];
@@ -272,12 +293,25 @@ function renderViewedOrder(container: HTMLElement) {
   }
 }
 
-function renderMatchDetail(match: JobMatch, container: HTMLElement) {
+function renderMatchDetail(
+  match: JobMatch,
+  container: HTMLElement,
+  preservedSection: HTMLElement | null = null,
+) {
+  const jobKey = match.job.Key || match.job.Id || "";
   const existing = container.querySelector(".job-section");
-  if (existing) existing.remove();
 
+  // A streamed sibling job triggers a full-pane repaint, which would
+  // otherwise wipe and rebuild this section (destroying an in-progress video
+  // scrub position) even when the viewed match itself hasn't changed.
+  if (preservedSection && jobKey && preservedSection.getAttribute("data-job-key") === jobKey) {
+    container.appendChild(preservedSection);
+    return;
+  }
+  if (existing) existing.remove();
   const section = document.createElement("div");
   section.className = "job-section";
+  if (jobKey) section.setAttribute("data-job-key", jobKey);
 
   const stateEl = document.createElement("div");
   stateEl.className = "job-item";
@@ -292,19 +326,22 @@ function renderMatchDetail(match: JobMatch, container: HTMLElement) {
   container.appendChild(section);
 }
 
-function showStatusIndicator(phase: string) {
-  if (!content) return;
-  let el = content.querySelector(".scan-status") as HTMLElement | null;
-  if (!el) {
-    el = document.createElement("div");
-    el.className = "scan-status";
-    content.prepend(el);
+function showProgress(p: ScanProgress) {
+  if (!progressEl) return;
+  if (p.phase === "done") {
+    progressEl.hidden = true;
+    return;
   }
-  const labels: Record<string, string> = {
-    scanning: "Scanning order",
-    fetching: "Fetching job data",
-  };
-  el.innerHTML = `<span class="spinner"></span> ${labels[phase] || phase}...`;
+  if (!progressEl.firstElementChild) {
+    progressEl.innerHTML =
+      `<div class="progress-label"></div>` +
+      `<div class="progress-track"><div class="progress-fill"></div></div>`;
+  }
+  const label = progressEl.querySelector(".progress-label") as HTMLElement;
+  const fill = progressEl.querySelector(".progress-fill") as HTMLElement;
+  label.textContent = scanProgressLabel(p);
+  fill.style.width = `${Math.round(scanProgressFraction(p) * 100)}%`;
+  progressEl.hidden = false;
 }
 
 document.addEventListener("click", async (e) => {

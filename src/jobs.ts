@@ -66,7 +66,10 @@ async function runSearch() {
     renderResults(host, config, jobs);
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    listEl.innerHTML = `<div class="error-box">Error: ${escHtml(msg)}</div>`;
+    listEl.innerHTML = `<div class="error-box">Couldn't search UiPath. <button id="retry-search">Try again</button><br><small>${escHtml(msg)}</small></div>`;
+    document
+      .getElementById("retry-search")
+      ?.addEventListener("click", () => runSearch());
   } finally {
     if (searchBtn) searchBtn.disabled = false;
   }
@@ -96,7 +99,7 @@ function buildCard(host: string, config: SiteConfig, job: UiPathJob): HTMLElemen
   const jobUrl =
     job.Key || job.Id ? fetchJobUrl(config, job.Key || job.Id || "") : "";
   card.innerHTML = `
-    <div class="job-card-header">
+    <div class="job-card-header" tabindex="0" role="button" aria-expanded="false">
       <span class="job-state" style="background:${getStateColor(job.State)}">${escHtml(job.State)}</span>
       <span class="job-order-id">${escHtml(job.Key || job.Id || "—")}</span>
       <span class="chevron">▸</span>
@@ -107,23 +110,22 @@ function buildCard(host: string, config: SiteConfig, job: UiPathJob): HTMLElemen
     </div>
   `;
 
+  const header = card.querySelector(".job-card-header") as HTMLElement;
   let match: JobMatch | null = null;
   let loading = false;
 
-  card.addEventListener("click", async (e) => {
-    const target = e.target as HTMLElement;
-    // Don't toggle when interacting with the link or inside the expanded body.
-    if (target.closest(".job-expanded") || target.closest(".job-link")) return;
-
+  async function toggle() {
     const existing = card.querySelector(".job-expanded");
     if (existing) {
       existing.remove();
       card.classList.remove("expanded");
+      header.setAttribute("aria-expanded", "false");
       return;
     }
     if (loading) return;
 
     card.classList.add("expanded");
+    header.setAttribute("aria-expanded", "true");
     const details = document.createElement("div");
     details.className = "job-expanded";
     card.appendChild(details);
@@ -145,6 +147,19 @@ function buildCard(host: string, config: SiteConfig, job: UiPathJob): HTMLElemen
     } finally {
       loading = false;
     }
+  }
+
+  card.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    // Don't toggle when interacting with the link or inside the expanded body.
+    if (target.closest(".job-expanded") || target.closest(".job-link")) return;
+    toggle();
+  });
+
+  header.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    toggle();
   });
 
   return card;

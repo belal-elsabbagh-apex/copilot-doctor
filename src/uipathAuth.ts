@@ -12,7 +12,7 @@ const tokenCache = new Map<string, CachedToken>();
 
 const SKEW_MS = 60_000;
 
-export function deriveTokenUrl(org: string): string {
+function deriveTokenUrl(org: string): string {
   return `https://cloud.uipath.com/${org}/identity_/connect/token`;
 }
 

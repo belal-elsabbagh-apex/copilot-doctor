@@ -21,6 +21,17 @@ export interface JobMatch {
   output: Record<string, unknown>;
   videoUrl: string;
   jobUrl: string;
+  // The queue transaction this job processed, when the scan correlated one.
+  // Absent for a job matched only by its own OutputArguments with no queue
+  // item, and on the jobs page (which does no queue lookup).
+  queueItem?: UiPathQueueItem;
+}
+
+// UiPath's ProcessingException complex property on a queue item. Present on a
+// Failed/Retried transaction; the free-text `Reason` is the useful part.
+export interface UiPathQueueItemException {
+  Reason?: string | null;
+  Type?: string | null;
 }
 
 // A UiPath queue transaction. Queue-consumer jobs (e.g. SDP_AuthSubmit) don't
@@ -28,12 +39,18 @@ export interface JobMatch {
 // correlatable through the queue item they processed: `SpecificContent.orderUid`
 // identifies the order and `ExecutorJobKey` points back at the job that ran it.
 export interface UiPathQueueItem {
+  Id?: number;
   Key?: string;
+  Reference?: string | null;
   Status?: string;
   ExecutorJobKey?: string | null;
   ProcessingExceptionType?: string | null;
+  ProcessingException?: UiPathQueueItemException | null;
   RetryNumber?: number;
+  QueueDefinitionId?: number;
   CreationTime?: string;
+  StartProcessing?: string | null;
+  EndProcessing?: string | null;
   SpecificContent?: Record<string, unknown>;
 }
 
@@ -228,6 +245,7 @@ export async function confirmJobsForOrder(
   hostname: string,
   jobs: UiPathJob[],
   orderId: string,
+  onBatch?: (done: number, total: number) => void,
 ): Promise<UiPathJob[]> {
   const confirmed: UiPathJob[] = [];
   for (let i = 0; i < jobs.length; i += 10) {
@@ -248,6 +266,7 @@ export async function confirmJobsForOrder(
         // Unparseable OutputArguments — not a confirmable match.
       }
     }
+    onBatch?.(Math.min(i + 10, jobs.length), jobs.length);
   }
   return confirmed;
 }
@@ -260,6 +279,7 @@ export async function fetchJobMatch(
   hostname: string,
   config: SiteConfig,
   job: UiPathJob,
+  queueItem?: UiPathQueueItem,
 ): Promise<JobMatch> {
   const full = job.OutputArguments
     ? job
@@ -274,5 +294,5 @@ export async function fetchJobMatch(
   }
   const videoUrl = await fetchJobVideoUrl(hostname, full.Key || "");
   const jobUrl = fetchJobUrl(config, full.Key || full.Id || "");
-  return { job: full, output, videoUrl, jobUrl };
+  return { job: full, output, videoUrl, jobUrl, queueItem };
 }

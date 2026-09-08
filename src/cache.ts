@@ -38,7 +38,7 @@ export interface SavedJob {
 // and background. Written by the background worker on SCAN_RESULTS; read by the
 // side panel to paint instantly when switching tabs. Keyed by tab id so tabs
 // stay independent.
-export function sessionScanKey(tabId: number): string {
+function sessionScanKey(tabId: number): string {
   return `scan:${tabId}`;
 }
 

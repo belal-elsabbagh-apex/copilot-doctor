@@ -6,6 +6,7 @@ import {
   getVisibleOrderIds,
 } from "./orderParser";
 import { getConfig } from "./config";
+import type { ScanProgress } from "./progress";
 
 const hostname = location.hostname;
 
@@ -48,6 +49,19 @@ function getCachedSnapshot(): ScanResult {
     scanError: "",
   };
 }
+
+function sendProgress(update: ScanProgress) {
+  chrome.runtime.sendMessage({ type: "SCAN_STATUS", hostname, ...update });
+}
+
+// Terminal update: the panel hides its progress row on "done".
+const SCAN_DONE: ScanProgress = {
+  phase: "done",
+  done: 0,
+  total: 0,
+  orderIndex: 1,
+  orderTotal: 1,
+};
 
 function setupAutoScan() {
   let lastSelectedId = "";
@@ -104,6 +118,7 @@ async function scanAllOrders(): Promise<ScanResult> {
       scanError: "No visible order cards found on this page.",
     };
     chrome.runtime.sendMessage({ type: "SCAN_RESULTS", hostname, ...empty });
+    sendProgress(SCAN_DONE);
     return empty;
   }
 
@@ -126,19 +141,38 @@ async function scanAllOrders(): Promise<ScanResult> {
 
   if (toFetch.length === 0) {
     persistScanResult(hostname, stale);
+    sendProgress(SCAN_DONE);
     return stale;
   }
 
-  chrome.runtime.sendMessage({ type: "SCAN_STATUS", hostname, phase: "fetching" });
+  const broadcast = () => {
+    chrome.runtime.sendMessage({
+      type: "SCAN_RESULTS",
+      hostname,
+      selectedOrderId,
+      orders: snapshotOrders(orderIds),
+      scanError: "",
+    });
+  };
 
   const config = await getConfig(hostname);
+  let orderIndex = 0;
   for (const orderId of toFetch) {
     if (myToken !== scanToken) return stale; // superseded by a newer scan
+    orderIndex++;
+    const index = orderIndex;
     const data = await getJobByOrderId(
       hostname,
       orderId,
       getCardDate(orderId),
       config,
+      (update) => {
+        if (myToken !== scanToken) return;
+        sendProgress({ ...update, orderIndex: index, orderTotal: toFetch.length });
+        if (!update.partial) return;
+        setCacheEntry(orderId, update.partial); // stream job cards in
+        broadcast();
+      },
     );
     setCacheEntry(orderId, data);
   }
@@ -150,8 +184,9 @@ async function scanAllOrders(): Promise<ScanResult> {
     orders: snapshotOrders(orderIds),
     scanError: "",
   };
-  chrome.runtime.sendMessage({ type: "SCAN_RESULTS", hostname, ...fresh });
+  broadcast();
   persistScanResult(hostname, fresh);
+  sendProgress(SCAN_DONE);
   console.debug("[Copilot Doctor] SCAN_RESULTS sent (fresh)");
   return fresh;
 }
